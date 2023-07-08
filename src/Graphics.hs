@@ -1,3 +1,5 @@
+{-# LANGUAGE PatternSynonyms #-}
+
 module Graphics (game) where
 
 import Interpreter (interpret)
@@ -14,14 +16,25 @@ import Terminal.Game
     , (&)
     )
 
-data Run = Pause | Run | Step | Quit | End
+data Run = Pause | Run | Step | Quit | End | Reset
 
 data GameState = GameState {_paused :: Run, _state :: State, _count :: Int}
 
+pattern KeyPause :: Event
+pattern KeyPause = KeyPress ' '
+pattern KeyStep :: Event
+pattern KeyStep = KeyPress '\n'
+pattern KeyQuit :: Event
+pattern KeyQuit = KeyPress 'q'
+pattern KeyReset :: Event
+pattern KeyReset = KeyPress 'r'
+
 game :: State -> Game GameState ()
-game s = Game 50 (GameState Pause s 0) f d
+game s = Game 50 start f d
   where
+    start = GameState Pause s 0
     f _ (GameState Quit _ _) _ = Left ()
+    f _ (GameState Reset _ _) _ = Right start
     f _ old@(GameState Pause _ _) Tick = Right old
     f _ (GameState run state count) Tick =
         case interpret state of
@@ -32,8 +45,8 @@ game s = Game 50 (GameState Pause s 0) f d
             Run -> Run
             Step -> Pause
             End -> End
-    f _ old@(GameState paused state count) (KeyPress c) = Right $ case c of
-        ' ' ->
+    f _ old@(GameState paused state count) c = Right $ case c of
+        KeyPause ->
             let
                 paused' = case paused of
                     Pause -> Run
@@ -42,7 +55,7 @@ game s = Game 50 (GameState Pause s 0) f d
                     End -> End
              in
                 GameState paused' state count
-        '\n' ->
+        KeyStep ->
             let
                 paused' = case paused of
                     Pause -> Step
@@ -51,7 +64,8 @@ game s = Game 50 (GameState Pause s 0) f d
                     End -> End
              in
                 GameState paused' state count
-        'q' -> GameState Quit state count
+        KeyQuit -> GameState Quit state count
+        KeyReset -> GameState Reset state count
         _ -> old
     d _genv (GameState paused state count) =
         blankPlane 64 45
@@ -87,6 +101,7 @@ drawPaused paused = stringPlane $ case paused of
     Step -> "Stepping"
     Quit -> "Quit"
     End -> "End"
+    Reset -> "Reset"
 
 drawLine :: Int -> Plane
 drawLine n = stringPlane $ replicate n '🭹'
@@ -98,4 +113,5 @@ help =
             [ "Press space to pause/unpause"
             , "Press enter to step"
             , "Press q to quit"
+            , "Press r to reset"
             ]
