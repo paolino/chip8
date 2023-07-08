@@ -1,6 +1,5 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 
 module Opcodes (Instruction (..), decode, encode) where
 
@@ -36,6 +35,7 @@ pattern N1 x y <- (nibble1 -> (x, y))
 nibble2 :: Opcode -> (Nibble, Nibble, Word8)
 nibble2 (N1 x y) =
     (x, fromIntegral $ y `shiftR` 8, fromIntegral $ y .&. 0x00FF)
+nibble2 _ = error "nibble2: impossible"
 
 -- >>> N2 0xA 0x2 0x8B == 0xA28B
 -- True
@@ -49,6 +49,7 @@ pattern N2 x y z <- (nibble2 -> (x, y, z))
 nibble3 :: Opcode -> (Nibble, Nibble, Nibble, Nibble)
 nibble3 (N2 x y z) =
     (x, y, fromIntegral $ z `shiftR` 4, fromIntegral $ z .&. 0x000F)
+nibble3 _ = error "nibble3: impossible"
 
 
 -- >>> N3 0xA 0x2 0x8 0xB == 0xA28B
