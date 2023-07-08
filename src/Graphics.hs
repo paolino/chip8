@@ -52,7 +52,7 @@ footer :: Row
 footer = footerLine + 1
 
 game :: State -> Game GameState ()
-game s = Game 50 start step display
+game s = Game 50 start step displayGame
   where
     start = GameState Pause s 0
     step _ (GameState Quit _ _) _ = Left ()
@@ -90,14 +90,14 @@ game s = Game 50 start step display
         KeyReset -> GameState Reset state count
         _ -> old
 
-display :: GEnv -> GameState -> Plane
-display _ (GameState run state count) =
+displayGame :: GEnv -> GameState -> Plane
+displayGame _ (GameState run state count) =
     blankPlane 64 45
         & (header, 1) % drawPaused run # bold
         & (header, 12) % drawCount count
         & (header, 32) % help
         & (headerLine, 1) % drawLine 64
-        & (window, 1) % drawDisplay state
+        & (window, 1) % drawStateDisplay state
         & (footerLine, 1) % drawLine 64
         & (footer, 1) % drawState state
 
@@ -107,8 +107,8 @@ drawCount = stringPlane . ("at step " <>) . show
 drawState :: State -> Plane
 drawState = stringPlane . renderState
 
-drawDisplay :: State -> Plane
-drawDisplay = stringPlane . render
+drawStateDisplay :: State -> Plane
+drawStateDisplay = stringPlane . render
 
 drawPaused :: Run -> Plane
 drawPaused run = stringPlane $ case run of
