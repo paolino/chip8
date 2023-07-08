@@ -8,15 +8,6 @@ import Data.Bits (Bits (..))
 import Data.Word (Word8)
 import Types (Address, Nibble, Opcode, Byte (..))
 
--- putStrLn $ showHex 12 "" -- prints "c"
--- putStrLn $ showIntAtBase 2 intToDigit 12 "" -- prints "1100"
--- 00E0 (clear screen)
--- 1NNN (jump)
--- 6XNN (set register VX)
--- 7XNN (add value to register VX)
--- ANNN (set index register I)
--- DXYN (display/draw)
-
 data Instruction
     = ClearScreen
     | Jump Address
