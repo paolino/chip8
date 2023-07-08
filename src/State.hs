@@ -18,10 +18,20 @@ import Data.ByteString qualified as B
 import Data.Foldable (foldl')
 import Data.List (intercalate)
 import Data.Map qualified as Map
-import Data.Word (Word16, Word8)
+import Data.Word (Word16)
 import Numeric (showHex)
 import Opcodes (decode)
-import Types (Display, Memory, Registers, Sprite, Word12, Word4)
+import Types
+    ( Address
+    , Byte (..)
+    , Coo (..)
+    , Display
+    , Memory
+    , Opcode
+    , Registers
+    , Sprite
+    , Nibble
+    )
 
 renderState :: State -> String
 renderState State{..} =
@@ -39,8 +49,8 @@ renderState State{..} =
 
 data State = State
     { registers :: Registers
-    , indexRegister :: Word12
-    , programCounter :: Word12
+    , indexRegister :: Address
+    , programCounter :: Address
     , stack :: [Word16]
     , delayTimer :: Word16
     , soundTimer :: Word16
@@ -50,7 +60,12 @@ data State = State
     deriving (Show, Eq)
 
 loadProgram :: ByteString -> Memory
-loadProgram = Map.fromList . zip [0 ..] . (replicate 512 0 <>) . B.unpack
+loadProgram =
+    Map.fromList
+        . zip [0 ..]
+        . (replicate 512 0 <>)
+        . fmap Byte
+        . B.unpack
 
 bootState :: ByteString -> State
 bootState program =
@@ -65,7 +80,7 @@ bootState program =
         , display = Map.empty
         }
 
-readSprite :: Word4 -> State -> Sprite
+readSprite :: Nibble -> State -> Sprite
 readSprite h State{..} = do
     i <- [0 .. h - 1]
     let row = memory Map.! (indexRegister + fromIntegral i)
@@ -73,16 +88,16 @@ readSprite h State{..} = do
         j <- [0 .. 7]
         pure $ row `shiftR` (7 - j) .&. 1 == 1
 
-draw :: Word8 -> Word8 -> Sprite -> Display -> Display
-draw x y sprite display = foldl' xor' display $ do
+draw :: Coo -> Sprite -> Display -> Display
+draw (Coo x y) sprite display = foldl' xor' display $ do
     (i, row) <- zip [0 ..] sprite
     (j, pixel) <- zip [0 ..] row
-    pure ((x + j) `mod` 64, (y + i) `mod` 32, pixel)
+    pure (Coo ((x + j) `mod` 64) ((y + i) `mod` 32), pixel)
   where
-    xor' :: Display -> (Word8, Word8, Bool) -> Display
-    xor' d (x', y', p) = Map.insertWith xor (x', y') p d
+    xor' :: Display -> (Coo, Bool) -> Display
+    xor' d (coo, p) = Map.insertWith xor coo p d
 
-retrieveInstruction :: Word12 -> Memory -> Word16
+retrieveInstruction :: Address -> Memory -> Opcode
 retrieveInstruction n m =
     fromIntegral (m Map.! n) `shiftL` 8 .|. fromIntegral (m Map.! (n + 1))
 
@@ -91,4 +106,4 @@ render State{..} = concat $ do
     y <- [0 .. 31]
     pure $ (<> "\n") $ do
         x <- [0 .. 63]
-        pure $ if Map.findWithDefault False (x, y) display then '█' else ' '
+        pure $ if Map.findWithDefault False (Coo x y) display then '█' else ' '

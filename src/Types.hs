@@ -1,21 +1,41 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Types (Memory, Registers, Display, Sprite, Word4, Word12) where
+module Types
+    ( Memory
+    , Registers
+    , Display
+    , Sprite
+    , Nibble
+    , Address
+    , Opcode (..)
+    , Byte (..)
+    , Coo (..)
+    ) where
 
 import Data.Bits (Bits (..))
 import Data.Map (Map)
 import Data.Word (Word16, Word8)
 
-newtype Word4 = Word4 Word8
-    deriving newtype (Show, Eq, Integral, Real, Enum, Num, Ord, Bits)
-newtype Word12 = Word12 Word16
+newtype Nibble = Nibble Word8
     deriving newtype (Show, Eq, Integral, Real, Enum, Num, Ord, Bits)
 
-type Memory = Map Word12 Word8
+newtype Address = Address Word16
+    deriving newtype (Show, Eq, Integral, Real, Enum, Num, Ord, Bits)
 
-type Registers = Map Word4 Word8
+newtype Opcode = Opcode Word16
+    deriving newtype (Show, Eq, Integral, Real, Enum, Num, Ord, Bits)
 
-type Display = Map (Word8, Word8) Bool
+newtype Byte = Byte Word8
+    deriving newtype (Show, Eq, Integral, Real, Enum, Num, Ord, Bits)
+
+type Memory = Map Address Byte
+
+type Registers = Map Nibble Byte
+
+data Coo = Coo Byte Byte
+    deriving (Show, Eq, Ord)
+
+type Display = Map Coo Bool
 
 type Sprite = [[Bool]]

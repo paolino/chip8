@@ -14,6 +14,7 @@ import State
     , retrieveInstruction
     )
 import Prelude hiding (readFile)
+import Types (Coo(..))
 
 interpret :: State -> Maybe State
 interpret State{..} =
@@ -32,7 +33,7 @@ step (AddToRegister x nn) State{..} =
 step (SetIndexRegister nnn) State{..} =
     Just $ State{indexRegister = nnn, ..}
 step (Display x y n) cpu@State{..} =
-    Just $ State{display = draw x' y' (readSprite n cpu) display, ..}
+    Just $ State{display = draw (Coo x' y') (readSprite n cpu) display, ..}
   where
     x' = registers Map.! x
     y' = registers Map.! y
