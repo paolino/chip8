@@ -2,7 +2,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 
-module Opcodes (Instruction (..), decode) where
+module Opcodes (Instruction (..), decode, encode) where
 
 import Data.Bits (Bits (..))
 import Data.Word (Word8)
@@ -67,3 +67,12 @@ decode (N2 7 x nn) = AddToRegister x $ Byte nn
 decode (N1 0xA nnn) = SetIndexRegister nnn
 decode (N3 0xD x y n) = Display x y n
 decode _ = End
+
+encode :: Instruction -> Opcode
+encode ClearScreen = ClearScreen'
+encode (Jump nnn) = N1 1 nnn
+encode (SetRegister x (Byte nn)) = N2 6 x nn
+encode (AddToRegister x (Byte nn)) = N2 7 x nn
+encode (SetIndexRegister nnn) = N1 0xA nnn
+encode (Display x y n) = N3 0xD x y n
+encode End = N1 0xF 0xFFF
