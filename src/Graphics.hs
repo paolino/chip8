@@ -67,33 +67,33 @@ game s = Game 50 start step display
             Run -> Run
             Step -> Pause
             End -> End
-    step _ old@(GameState paused state count) c = Right $ case c of
+    step _ old@(GameState run state count) c = Right $ case c of
         KeyPause ->
             let
-                paused' = case paused of
+                run' = case run of
                     Pause -> Run
                     Run -> Pause
                     Step -> Pause
                     End -> End
              in
-                GameState paused' state count
+                GameState run' state count
         KeyStep ->
             let
-                paused' = case paused of
+                run' = case run of
                     Pause -> Step
                     Run -> Step
                     Step -> Pause
                     End -> End
              in
-                GameState paused' state count
+                GameState run' state count
         KeyQuit -> GameState Quit state count
         KeyReset -> GameState Reset state count
         _ -> old
 
 display :: GEnv -> GameState -> Plane
-display _ (GameState paused state count) =
+display _ (GameState run state count) =
     blankPlane 64 45
-        & (header, 1) % drawPaused paused # bold
+        & (header, 1) % drawPaused run # bold
         & (header, 12) % drawCount count
         & (header, 32) % help
         & (headerLine, 1) % drawLine 64
@@ -111,7 +111,7 @@ drawDisplay :: State -> Plane
 drawDisplay = stringPlane . render
 
 drawPaused :: Run -> Plane
-drawPaused paused = stringPlane $ case paused of
+drawPaused run = stringPlane $ case run of
     Pause -> "Paused"
     Run -> "Running"
     Step -> "Stepping"
