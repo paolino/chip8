@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Interpreter (interpret) where
@@ -9,12 +10,12 @@ import Data.Map qualified as Map
 import Opcodes (Instruction (..), decode)
 import State
     ( State (..)
-    , draw
+    , pasteSprite
     , readSprite
     , retrieveInstruction
     )
+import Types (Coo (..), pattern VF)
 import Prelude hiding (readFile)
-import Types (Coo(..))
 
 interpret :: State -> Maybe State
 interpret State{..} =
@@ -33,7 +34,14 @@ step (AddToRegister x nn) State{..} =
 step (SetIndexRegister nnn) State{..} =
     Just $ State{indexRegister = nnn, ..}
 step (Display x y n) cpu@State{..} =
-    Just $ State{display = draw (Coo x' y') (readSprite n cpu) display, ..}
+    let (changed, display') = pasteSprite (Coo x' y') (readSprite n cpu) display
+     in Just
+            $ State
+                { display = display'
+                , registers =
+                    Map.insert VF (if changed then 1 else 0) registers
+                , ..
+                }
   where
     x' = registers Map.! x
     y' = registers Map.! y

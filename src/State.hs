@@ -6,7 +6,7 @@ module State
     ( State (..)
     , bootState
     , readSprite
-    , draw
+    , pasteSprite
     , retrieveInstruction
     , render
     , renderState
@@ -88,14 +88,18 @@ readSprite h State{..} = do
         j <- [0 .. 7]
         pure $ row `shiftR` (7 - j) .&. 1 == 1
 
-draw :: Coo -> Sprite -> Display -> Display
-draw (Coo x y) sprite display = foldl' xor' display $ do
+pasteSprite :: Coo -> Sprite -> Display -> (Bool, Display)
+pasteSprite (Coo x y) sprite display = foldl' xor' (False, display) $ do
     (i, row) <- zip [0 ..] sprite
     (j, pixel) <- zip [0 ..] row
     pure (Coo ((x + j) `mod` 64) ((y + i) `mod` 32), pixel)
   where
-    xor' :: Display -> (Coo, Bool) -> Display
-    xor' d (coo, p) = Map.insertWith xor coo p d
+    xor' :: (Bool, Display) -> (Coo, Bool) -> (Bool, Display)
+    xor' (v, d) (coo, p) = let
+        p' = Map.findWithDefault False coo d
+        p'' = p' `xor` p
+        v' = p' /= p''
+        in (v || v', Map.insert coo p'' d)
 
 retrieveInstruction :: Address -> Memory -> Opcode
 retrieveInstruction n m =

@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 module Types
     ( Memory
@@ -11,6 +12,7 @@ module Types
     , Opcode (..)
     , Byte (..)
     , Coo (..)
+    , pattern VF
     ) where
 
 import Data.Bits (Bits (..))
@@ -39,3 +41,6 @@ data Coo = Coo Byte Byte
 type Display = Map Coo Bool
 
 type Sprite = [[Bool]]
+
+pattern VF :: Nibble
+pattern VF = 0xF
