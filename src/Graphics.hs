@@ -8,12 +8,13 @@ import Terminal.Game
     ( Event (KeyPress, Tick)
     , Game (Game)
     , Plane
+    , Row
     , blankPlane
     , bold
     , stringPlane
     , (#)
     , (%)
-    , (&)
+    , (&), GEnv
     )
 
 data Run = Pause | Run | Step | Quit | End | Reset
@@ -29,14 +30,35 @@ pattern KeyQuit = KeyPress 'q'
 pattern KeyReset :: Event
 pattern KeyReset = KeyPress 'r'
 
+headerHeight :: Row
+headerHeight = 4
+
+windowHeight :: Row
+windowHeight = 32
+
+header :: Row
+header = 1
+
+headerLine :: Row
+headerLine = header + headerHeight
+
+window :: Row
+window = headerLine + 1
+
+footerLine :: Row
+footerLine = window + windowHeight
+
+footer :: Row
+footer = footerLine + 1
+
 game :: State -> Game GameState ()
-game s = Game 50 start f d
+game s = Game 50 start step display
   where
     start = GameState Pause s 0
-    f _ (GameState Quit _ _) _ = Left ()
-    f _ (GameState Reset _ _) _ = Right start
-    f _ old@(GameState Pause _ _) Tick = Right old
-    f _ (GameState run state count) Tick =
+    step _ (GameState Quit _ _) _ = Left ()
+    step _ (GameState Reset _ _) _ = Right start
+    step _ old@(GameState Pause _ _) Tick = Right old
+    step _ (GameState run state count) Tick =
         case interpret state of
             Nothing -> Right $ GameState Pause state count
             Just state' -> Right $ GameState run' state' $ count + 1
@@ -45,7 +67,7 @@ game s = Game 50 start f d
             Run -> Run
             Step -> Pause
             End -> End
-    f _ old@(GameState paused state count) c = Right $ case c of
+    step _ old@(GameState paused state count) c = Right $ case c of
         KeyPause ->
             let
                 paused' = case paused of
@@ -67,23 +89,17 @@ game s = Game 50 start f d
         KeyQuit -> GameState Quit state count
         KeyReset -> GameState Reset state count
         _ -> old
-    d _genv (GameState paused state count) =
-        blankPlane 64 45
-            & (1, 1)
-            % drawPaused paused
-            # bold
-            & (1, 12)
-            % drawCount count
-            & (38, 1)
-            % drawState state
-            & (4, 1)
-            % drawLine 64
-            & (7, 1)
-            % drawDisplay state
-            & (37, 1)
-            % drawLine 64
-            & (1, 32)
-            % help
+
+display :: GEnv -> GameState -> Plane
+display _ (GameState paused state count) =
+    blankPlane 64 45
+        & (header, 1) % drawPaused paused # bold
+        & (header, 12) % drawCount count
+        & (header, 32) % help
+        & (headerLine, 1) % drawLine 64
+        & (window, 1) % drawDisplay state
+        & (footerLine, 1) % drawLine 64
+        & (footer, 1) % drawState state
 
 drawCount :: Int -> Plane
 drawCount = stringPlane . ("at step " <>) . show
