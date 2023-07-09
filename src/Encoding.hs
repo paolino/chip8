@@ -40,7 +40,7 @@ deriving instance Functor Assembly
 type AssemblyF = Free Assembly
 
 addSprite :: (MonadFree Assembly m) => Sprite -> m Ref
-addSprite sprite = liftF $ StoreSprite sprite id
+addSprite sprite' = liftF $ StoreSprite sprite' id
 
 addInstruction :: (MonadFree Assembly m) => Instruction -> m Address
 addInstruction instruction =
@@ -103,7 +103,7 @@ interpreter (Pure _) encoding =
     foldl' solveRef encoding $ Map.assocs $ encodingSprites encoding
   where
     solveRef :: Encoding -> (Ref, Sprite) -> Encoding
-    solveRef encoding' (ref, sprite) =
+    solveRef encoding' (ref, sprite') =
         foldl' g encoding''
             $ Map.findWithDefault [] ref
             $ encodingAddresses encoding'
@@ -111,11 +111,11 @@ interpreter (Pure _) encoding =
         encoding'' =
             encoding'
                 { encodingMemory =
-                    storeSprite sprite (encodingTop encoding')
+                    storeSprite sprite' (encodingTop encoding')
                         $ encodingMemory encoding'
                 , encodingTop =
                     encodingTop encoding'
-                        + fromIntegral (length sprite)
+                        + fromIntegral (length sprite')
                 }
         g encoding''' (targetAddress, solveInstruction) =
             encoding'''
@@ -125,8 +125,8 @@ interpreter (Pure _) encoding =
                 }
           where
             address = encodingTop encoding'
-interpreter (Free (StoreSprite sprite f)) encoding =
-    let (ref, encoding') = refSprite encoding sprite
+interpreter (Free (StoreSprite sprite' f)) encoding =
+    let (ref, encoding') = refSprite encoding sprite'
      in interpreter (f ref) encoding'
 interpreter (Free (StoreInstruction instruction f)) encoding =
     let (address, encoding') = pushInstruction encoding instruction
@@ -148,13 +148,13 @@ refInstruction ref encoding f =
      in (address, encoding')
 
 refSprite :: Encoding -> Sprite -> (Ref, Encoding)
-refSprite encoding sprite =
+refSprite encoding sprite' =
     let ref = encodingAddressTop encoding
         encoding' =
             encoding
                 { encodingAddressTop = encodingAddressTop encoding + 1
                 , encodingSprites =
-                    Map.insert ref sprite $ encodingSprites encoding
+                    Map.insert ref sprite' $ encodingSprites encoding
                 }
      in (ref, encoding')
 
@@ -171,8 +171,8 @@ pushInstruction encoding instruction =
      in (address, encoding')
 
 storeSprite :: Sprite -> Address -> Memory -> Memory
-storeSprite sprite address memory =
-    foldl' storeLine memory (zip [address ..] sprite)
+storeSprite sprite' address memory =
+    foldl' storeLine memory (zip [address ..] sprite')
   where
     storeLine memory' (address', line') =
         Map.insert address' (byteOf line') memory'
@@ -213,8 +213,8 @@ el x = liftF $ Elem x ()
 l :: String -> Free (List [Bool]) ()
 l = el . line
 
-s :: Free (List [Bool]) a -> Free Assembly Ref
-s = addSprite . list
+sprite :: Free (List [Bool]) a -> Free Assembly Ref
+sprite = addSprite . list
 
 i_ :: Instruction -> Free Assembly ()
 i_ = addInstruction_
@@ -232,7 +232,7 @@ jump = Jump
 -- a circle at (1, 1) and a cross at (8, 1)
 example :: AssemblyF ()
 example = do
-    s1 <- s $ do
+    s1 <- sprite $ do
         l "  xxxx  "
         l " x    x "
         l "x      x"
@@ -241,7 +241,7 @@ example = do
         l "x      x"
         l " x    x "
         l "  xxxx  "
-    s2 <- s $ do
+    s2 <- sprite $ do
         l "x      x"
         l " x    x "
         l "  x  x  "

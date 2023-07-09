@@ -3,7 +3,7 @@
 module Programs.IBM (program) where
 
 import Control.Monad.Free (Free)
-import Encoding (AssemblyF, List, i_, ia_, index, l, s, pattern V1, pattern V0 ,Ref)
+import Encoding (AssemblyF, List, i_, ia_, index, l, sprite, pattern V1, pattern V0 ,Ref)
 import Opcodes (Instruction (Display, SetRegister))
 import Types (Byte)
 
@@ -14,15 +14,15 @@ le :: String -> Free (List [Bool]) ()
 le = l
 
 placeSprite :: Byte -> Byte -> Int -> Ref -> AssemblyF ()
-placeSprite x y h sprite = do
+placeSprite x y h s = do
     i_ $ SetRegister V1 x
     i_ $ SetRegister V0 y
-    ia_ sprite index
+    ia_ s index
     i_ $ Display V1 V0 h
 
 program :: AssemblyF ()
 program = do
-    i' <- s $ do
+    i' <- sprite $ do
         ls "████████"
         ls "████████"
         ls "  ████  "
@@ -31,7 +31,7 @@ program = do
         ls "  ████  "
         ls "████████"
         le "████████"
-    b'1 <- s $ do
+    b'1 <- sprite $ do
         ls "████████"
         ls "████████"
         ls "  ██    "
@@ -40,7 +40,7 @@ program = do
         ls "  ██    "
         ls "████████"
         le "████████"
-    b'2 <- s $ do
+    b'2 <- sprite $ do
         ls "█       "
         ls "███     "
         ls "███     "
@@ -49,7 +49,7 @@ program = do
         ls "███     "
         ls "███     "
         le "█       "
-    m'1 <- s $ do
+    m'1 <- sprite $ do
         ls "█████   "
         ls "██████  "
         ls "  █████ "
@@ -58,13 +58,13 @@ program = do
         ls "  ███  █"
         ls "█████   "
         le "█████   "
-    m'2 <- s $ do
+    m'2 <- sprite $ do
         ls "█ █     "
         ls "███     "
         ls "███     "
         ls "███     "
         le " █      "
-    m'3 <- s $ do
+    m'3 <- sprite $ do
         ls "   █████"
         ls "  ██████"
         ls " █████  "
