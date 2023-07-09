@@ -219,6 +219,9 @@ sprite = addSprite . list
 i_ :: Instruction -> Free Assembly ()
 i_ = addInstruction_
 
+i :: Instruction -> Free Assembly Address
+i = addInstruction
+
 ia_ :: Ref -> (Address -> Instruction) -> Free Assembly ()
 ia_ = addAddressInstruction_
 

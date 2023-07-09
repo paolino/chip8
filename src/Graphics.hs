@@ -2,7 +2,7 @@
 
 module Graphics (game) where
 
-import Interpreter (interpret)
+import Interpreter (interpret, interpretN)
 import State (State, render, renderState)
 import Terminal.Game
     ( Event (KeyPress, Tick)
@@ -30,6 +30,9 @@ pattern KeyQuit :: Event
 pattern KeyQuit = KeyPress 'q'
 pattern KeyReset :: Event
 pattern KeyReset = KeyPress 'r'
+
+speed :: Int
+speed = 10
 
 headerHeight :: Row
 headerHeight = 4
@@ -59,6 +62,8 @@ gameHeight = headerHeight + windowHeight + footerHeight + 2
   where
     footerHeight = 8
 
+
+
 game :: State -> Game GameState ()
 game s = Game 50 start step displayGame
   where
@@ -67,9 +72,9 @@ game s = Game 50 start step displayGame
     step _ (GameState Reset _ _) _ = Right start
     step _ old@(GameState Pause _ _) Tick = Right old
     step _ (GameState run state count) Tick =
-        case interpret state of
+        case interpretN speed state of
             Nothing -> Right $ GameState Pause state count
-            Just state' -> Right $ GameState run' state' $ count + 1
+            Just state' -> Right $ GameState run' state' $ count + speed
       where
         run' = case run of
             Run -> Run

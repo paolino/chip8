@@ -3,9 +3,21 @@
 module Programs.IBM (program) where
 
 import Control.Monad.Free (Free)
-import Encoding (AssemblyF, List, i_, ia_, index, l, sprite, pattern V1, pattern V0 ,Ref)
+import Encoding
+    ( AssemblyF
+    , List
+    , Ref
+    , i_
+    , ia_
+    , index
+    , l
+    , sprite
+    , pattern V0
+    , pattern V1, jump, i
+    )
 import Opcodes (Instruction (Display, SetRegister))
-import Types (Byte)
+import Types (Byte, Address)
+import Control.Monad (void)
 
 ls :: String -> Free (List [Bool]) ()
 ls x = l x >> l "        "
@@ -13,12 +25,16 @@ ls x = l x >> l "        "
 le :: String -> Free (List [Bool]) ()
 le = l
 
-placeSprite :: Byte -> Byte -> Int -> Ref -> AssemblyF ()
+placeSprite :: Byte -> Byte -> Int -> Ref -> AssemblyF Address
 placeSprite x y h s = do
-    i_ $ SetRegister V1 x
+    start <- i $ SetRegister V1 x
     i_ $ SetRegister V0 y
     ia_ s index
     i_ $ Display V1 V0 h
+    pure start
+
+placeSprite_ :: Byte -> Byte -> Int -> Ref -> AssemblyF ()
+placeSprite_ x y h s = void $ placeSprite x y h s
 
 program :: AssemblyF ()
 program = do
@@ -74,9 +90,10 @@ program = do
         ls "   █████"
         le "   █████"
 
-    placeSprite 12 9 15 i'
-    placeSprite 21 9 15 b'1
-    placeSprite 29 9 15 b'2
-    placeSprite 33 9 15 m'1
-    placeSprite 41 15 9 m'2
-    placeSprite 44 9 15 m'3
+    start <- placeSprite 12 9 15 i'
+    placeSprite_ 21 9 15 b'1
+    placeSprite_ 29 9 15 b'2
+    placeSprite_ 33 9 15 m'1
+    placeSprite_ 41 15 9 m'2
+    placeSprite_ 44 9 15 m'3
+    i_ $ jump start

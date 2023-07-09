@@ -3,9 +3,8 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Interpreter (interpret) where
+module Interpreter (interpret, interpretN) where
 
-import Data.Functor ((<&>))
 import Data.Map qualified as Map
 import Opcodes (Instruction (..), decode)
 import State
@@ -19,8 +18,8 @@ import Prelude hiding (readFile)
 
 interpret :: State -> Maybe State
 interpret State{..} =
-    step (decode $ retrieveInstruction programCounter memory) State{..}
-        <&> \cpu'' -> cpu''{programCounter = programCounter + 2}
+    step (decode $ retrieveInstruction programCounter memory)
+        State{programCounter = programCounter + 2, ..}
 
 step :: Instruction -> State -> Maybe State
 step ClearScreen State{..} =
@@ -46,3 +45,7 @@ step (Display x y n) cpu@State{..} =
     x' = registers Map.! x
     y' = registers Map.! y
 step End _ = Nothing
+
+interpretN :: Int -> State -> Maybe State
+interpretN 0 cpu = Just cpu
+interpretN n cpu = interpret cpu >>= interpretN (n - 1)
