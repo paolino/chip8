@@ -1,11 +1,11 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Opcodes (Instruction (..), decode, encode) where
+module Opcodes (Instruction (..), decode, encode, opcodeBytes, bytesOpcode) where
 
 import Data.Bits (Bits (..))
 import Data.Word (Word8)
-import Types (Address, Nibble, Opcode, Byte (..))
+import Types (Address, Byte (..), Nibble, Opcode)
 
 data Instruction
     = ClearScreen
@@ -13,7 +13,7 @@ data Instruction
     | SetRegister Nibble Byte
     | AddToRegister Nibble Byte
     | SetIndexRegister Address
-    | Display Nibble Nibble Nibble
+    | Display Nibble Nibble Int
     | End
     deriving (Show, Eq)
 
@@ -40,7 +40,6 @@ nibble2 _ = error "nibble2: impossible"
 -- >>> N2 0xA 0x2 0x8B == 0xA28B
 -- True
 
-
 pattern N2 :: Nibble -> Nibble -> Word8 -> Opcode
 pattern N2 x y z <- (nibble2 -> (x, y, z))
     where
@@ -50,7 +49,6 @@ nibble3 :: Opcode -> (Nibble, Nibble, Nibble, Nibble)
 nibble3 (N2 x y z) =
     (x, y, fromIntegral $ z `shiftR` 4, fromIntegral $ z .&. 0x000F)
 nibble3 _ = error "nibble3: impossible"
-
 
 -- >>> N3 0xA 0x2 0x8 0xB == 0xA28B
 -- True
@@ -66,7 +64,7 @@ decode (N1 1 nnn) = Jump nnn
 decode (N2 6 x nn) = SetRegister x $ Byte nn
 decode (N2 7 x nn) = AddToRegister x $ Byte nn
 decode (N1 0xA nnn) = SetIndexRegister nnn
-decode (N3 0xD x y n) = Display x y n
+decode (N3 0xD x y n) = Display x y $ fromIntegral n
 decode _ = End
 
 encode :: Instruction -> Opcode
@@ -75,5 +73,16 @@ encode (Jump nnn) = N1 1 nnn
 encode (SetRegister x (Byte nn)) = N2 6 x nn
 encode (AddToRegister x (Byte nn)) = N2 7 x nn
 encode (SetIndexRegister nnn) = N1 0xA nnn
-encode (Display x y n) = N3 0xD x y n
+encode (Display x y n) = N3 0xD x y $ fromIntegral n
 encode End = N1 0xF 0xFFF
+
+-- >>> opcodeBytes 0xAB
+
+opcodeBytes :: Opcode -> (Byte, Byte)
+opcodeBytes x = (fromIntegral $ x `shiftR` 8, fromIntegral $ x .&. 0x00FF)
+
+bytesOpcode :: (Byte, Byte) -> Opcode
+bytesOpcode (Byte x, Byte y) =
+    fromIntegral x `shiftL` 8 + fromIntegral y
+
+-- >>> Opcode 0xA 0xB == 0xAB

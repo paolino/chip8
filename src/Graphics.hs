@@ -6,6 +6,7 @@ import Interpreter (interpret)
 import State (State, render, renderState)
 import Terminal.Game
     ( Event (KeyPress, Tick)
+    , GEnv
     , Game (Game)
     , Plane
     , Row
@@ -14,7 +15,7 @@ import Terminal.Game
     , stringPlane
     , (#)
     , (%)
-    , (&), GEnv
+    , (&)
     )
 
 data Run = Pause | Run | Step | Quit | End | Reset
@@ -50,6 +51,13 @@ footerLine = window + windowHeight
 
 footer :: Row
 footer = footerLine + 1
+
+-- >>> gameHeight
+
+gameHeight :: Row
+gameHeight = headerHeight + windowHeight + footerHeight + 2
+  where
+    footerHeight = 8
 
 game :: State -> Game GameState ()
 game s = Game 50 start step displayGame
@@ -92,14 +100,22 @@ game s = Game 50 start step displayGame
 
 displayGame :: GEnv -> GameState -> Plane
 displayGame _ (GameState run state count) =
-    blankPlane 64 45
-        & (header, 1) % drawPaused run # bold
-        & (header, 12) % drawCount count
-        & (header, 32) % help
-        & (headerLine, 1) % drawLine 64
-        & (window, 1) % drawStateDisplay state
-        & (footerLine, 1) % drawLine 64
-        & (footer, 1) % drawState state
+    blankPlane 64 gameHeight
+        & (header, 1)
+        % drawPaused run
+        # bold
+        & (header, 12)
+        % drawCount count
+        & (header, 32)
+        % help
+        & (headerLine, 1)
+        % drawLine 64
+        & (window, 1)
+        % drawStateDisplay state
+        & (footerLine, 1)
+        % drawLine 64
+        & (footer, 1)
+        % drawState state
 
 drawCount :: Int -> Plane
 drawCount = stringPlane . ("at step " <>) . show

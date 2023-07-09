@@ -20,6 +20,7 @@ import Data.List (intercalate)
 import Data.Map qualified as Map
 import Data.Word (Word16)
 import Numeric (showHex)
+import Offset (addHeaderSpace, memoryOffset)
 import Opcodes (decode)
 import Types
     ( Address
@@ -27,10 +28,10 @@ import Types
     , Coo (..)
     , Display
     , Memory
+    
     , Opcode
     , Registers
     , Sprite
-    , Nibble
     )
 
 renderState :: State -> String
@@ -63,7 +64,7 @@ loadProgram :: ByteString -> Memory
 loadProgram =
     Map.fromList
         . zip [0 ..]
-        . (replicate 512 0 <>)
+        . addHeaderSpace
         . fmap Byte
         . B.unpack
 
@@ -72,7 +73,7 @@ bootState program =
     State
         { registers = Map.empty
         , indexRegister = 0
-        , programCounter = 0x200
+        , programCounter = memoryOffset
         , stack = []
         , delayTimer = 0
         , soundTimer = 0
@@ -80,7 +81,7 @@ bootState program =
         , display = Map.empty
         }
 
-readSprite :: Nibble -> State -> Sprite
+readSprite :: Int -> State -> Sprite
 readSprite h State{..} = do
     i <- [0 .. h - 1]
     let row = memory Map.! (indexRegister + fromIntegral i)
@@ -95,15 +96,17 @@ pasteSprite (Coo x y) sprite display = foldl' xor' (False, display) $ do
     pure (Coo ((x + j) `mod` 64) ((y + i) `mod` 32), pixel)
   where
     xor' :: (Bool, Display) -> (Coo, Bool) -> (Bool, Display)
-    xor' (v, d) (coo, p) = let
-        p' = Map.findWithDefault False coo d
-        p'' = p' `xor` p
-        v' = p' /= p''
-        in (v || v', Map.insert coo p'' d)
+    xor' (v, d) (coo, p) =
+        let
+            p' = Map.findWithDefault False coo d
+            p'' = p' `xor` p
+            v' = p' /= p''
+         in
+            (v || v', Map.insert coo p'' d)
 
 retrieveInstruction :: Address -> Memory -> Opcode
 retrieveInstruction n m =
-    fromIntegral (m Map.! n) `shiftL` 8 .|. fromIntegral (m Map.! (n + 1))
+    fromIntegral (m Map.! n) `shiftL` 8 + fromIntegral (m Map.! (n + 1))
 
 render :: State -> String
 render State{..} = concat $ do

@@ -18,6 +18,7 @@ module Types
 import Data.Bits (Bits (..))
 import Data.Map (Map)
 import Data.Word (Word16, Word8)
+import Numeric (showHex)
 
 newtype Nibble = Nibble Word8
     deriving newtype (Show, Eq, Integral, Real, Enum, Num, Ord, Bits)
@@ -26,7 +27,10 @@ newtype Address = Address Word16
     deriving newtype (Show, Eq, Integral, Real, Enum, Num, Ord, Bits)
 
 newtype Opcode = Opcode Word16
-    deriving newtype (Show, Eq, Integral, Real, Enum, Num, Ord, Bits)
+    deriving newtype (Eq, Integral, Real, Enum, Num, Ord, Bits)
+
+instance Show Opcode where
+    show (Opcode x) = showHex x ""
 
 newtype Byte = Byte Word8
     deriving newtype (Show, Eq, Integral, Real, Enum, Num, Ord, Bits)
