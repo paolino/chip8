@@ -109,16 +109,22 @@ displayGame _ (GameState run state count) =
         & (header, 1)
         % drawPaused run
         # bold
+        --
         & (header, 12)
         % drawCount count
+        --
         & (header, 32)
         % help
+        --
         & (headerLine, 1)
         % drawLine 64
+        --
         & (window, 1)
         % drawStateDisplay state
+        --
         & (footerLine, 1)
         % drawLine 64
+        --
         & (footer, 1)
         % drawState state
 
