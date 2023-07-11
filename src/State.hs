@@ -27,8 +27,8 @@ import Types
     , Byte (..)
     , Coo (..)
     , Display
+    , Height
     , Memory
-    
     , Opcode
     , Registers
     , Sprite
@@ -81,7 +81,7 @@ bootState program =
         , display = Map.empty
         }
 
-readSprite :: Int -> State -> Sprite
+readSprite :: Height -> State -> Sprite
 readSprite h State{..} = do
     i <- [0 .. h - 1]
     let row = memory Map.! (indexRegister + fromIntegral i)
@@ -101,7 +101,7 @@ pasteSprite (Coo x y) sprite display = foldl' xor' (False, display) $ do
             p' = Map.findWithDefault False coo d
             p'' = p' `xor` p
             v' = p' /= p''
-         in
+        in
             (v || v', Map.insert coo p'' d)
 
 retrieveInstruction :: Address -> Memory -> Opcode

@@ -14,7 +14,7 @@ module Opcodes
 
 import Data.Bits (Bits (..))
 import Data.Word (Word8)
-import Types (Address, Byte (..), Nibble, Opcode)
+import Types (Address, Byte (..), Height, Nibble, Opcode)
 
 -- | The instructions that the CPU can execute
 data Instruction
@@ -23,7 +23,7 @@ data Instruction
     | SetRegister Nibble Byte
     | AddToRegister Nibble Byte
     | SetIndexRegister Address
-    | Display Nibble Nibble Int
+    | Display Nibble Nibble Height
     | End
     deriving (Show, Eq)
 

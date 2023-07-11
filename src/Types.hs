@@ -7,8 +7,9 @@ module Types
     , Registers
     , Display
     , Sprite
-    , Nibble
-    , Address
+    , Height (..)
+    , Nibble (..)
+    , Address (..)
     , Opcode (..)
     , Byte (..)
     , Coo (..)
@@ -24,6 +25,9 @@ newtype Nibble = Nibble Word8
     deriving newtype (Show, Eq, Integral, Real, Enum, Num, Ord, Bits)
 
 newtype Address = Address Word16
+    deriving newtype (Show, Eq, Integral, Real, Enum, Num, Ord, Bits)
+
+newtype Height = Height Word8
     deriving newtype (Show, Eq, Integral, Real, Enum, Num, Ord, Bits)
 
 newtype Opcode = Opcode Word16

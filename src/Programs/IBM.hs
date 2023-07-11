@@ -20,7 +20,7 @@ import Opcodes
     , pattern V0
     , pattern V1
     )
-import Types (Address, Byte)
+import Types (Address, Byte, Height)
 
 -- | A line of an IBM sprite is always followed by an empty line
 ls :: String -> Free (List [Bool]) ()
@@ -33,7 +33,7 @@ le = l
 -- | Place a sprite at the given coordinates, with the given height
 -- here we appreciate the power of the assembly language where we can
 -- define our own instructions
-placeSprite :: Byte -> Byte -> Int -> Ref -> AssemblyF Address
+placeSprite :: Byte -> Byte -> Height -> Ref -> AssemblyF Address
 placeSprite x y h s = do
     start <- i $ SetRegister V0 x
     i_ $ SetRegister V1 y
@@ -42,7 +42,7 @@ placeSprite x y h s = do
     pure start
 
 -- | Same as 'placeSprite' but without the returned address.
-placeSprite_ :: Byte -> Byte -> Int -> Ref -> AssemblyF ()
+placeSprite_ :: Byte -> Byte -> Height -> Ref -> AssemblyF ()
 placeSprite_ x y h s = void $ placeSprite x y h s
 
 program :: AssemblyF ()
