@@ -10,12 +10,14 @@
 ## prerequisites
 
 - install cabal via ghcup
-- ```
-  cabal update
-  ```
+- > cabal update
+  
 
 
 ## run
-```
-cabal run chip8 will run the IBM logo program compiled from this code.
-```
+
+> cabal run chip8
+
+- will produce a `ch8` executable in the roms folder
+- will load and run that executable
+
