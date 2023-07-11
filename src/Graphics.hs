@@ -2,7 +2,7 @@
 
 module Graphics (game) where
 
-import Interpreter (interpret, interpretN)
+import Interpreter (interpretN)
 import State (State, render, renderState)
 import Terminal.Game
     ( Event (KeyPress, Tick)
@@ -61,8 +61,6 @@ gameHeight :: Row
 gameHeight = headerHeight + windowHeight + footerHeight + 2
   where
     footerHeight = 8
-
-
 
 game :: State -> Game GameState ()
 game s = Game 50 start step displayGame

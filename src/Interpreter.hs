@@ -16,6 +16,8 @@ import State
 import Types (Coo (..), pattern VF)
 import Prelude hiding (readFile)
 
+-- | Interpret a single instruction, returning the new state of the CPU, or
+-- Nothing if the program has ended
 interpret :: State -> Maybe State
 interpret State{..} =
     step (decode $ retrieveInstruction programCounter memory)
@@ -46,6 +48,8 @@ step (Display x y n) cpu@State{..} =
     y' = registers Map.! y
 step End _ = Nothing
 
+-- | Interpret a number of instructions, returning the final state of the CPU, or
+-- Nothing if the program has ended
 interpretN :: Int -> State -> Maybe State
 interpretN 0 cpu = Just cpu
 interpretN n cpu = interpret cpu >>= interpretN (n - 1)
