@@ -17,5 +17,5 @@
 
 ## run
 ```
-cabal run chip8
+cabal run chip8 will run the IBM logo program compiled from this code.
 ```
