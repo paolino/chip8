@@ -7,14 +7,15 @@ import Test.QuickCheck
     , forAll
     , oneof
     )
-import Types (Address (..), Byte (..), Height (..), Nibble (..))
+import Types
+    ( Address (..)
+    , Byte (..)
+    , Height (..)
+    , Nibble (..)
+    )
 
 main :: IO ()
 main = hspec $ do
-    describe "read" $ do
-        it "is inverse to show"
-            $ property
-            $ \x -> (read . show) x `shouldBe` (x :: Int)
     describe "decode" $ do
         it "is inverse to encode"
             $ property
