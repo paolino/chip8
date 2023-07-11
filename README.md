@@ -3,6 +3,8 @@
 ## implemented
 
 - IBM logo renderer
+- IBM logo assembler
+- DSL to compile to chip8 programs (limited opcodes)
 
 
 ## prerequisites
