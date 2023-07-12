@@ -24,6 +24,8 @@ data Instruction
     | AddToRegister Nibble Byte
     | SetIndexRegister Address
     | Display Nibble Nibble Height
+    | Call Address
+    | Return
     | End
     deriving (Show, Eq)
 
@@ -74,6 +76,8 @@ decode (N2 6 x nn) = SetRegister x $ Byte nn
 decode (N2 7 x nn) = AddToRegister x $ Byte nn
 decode (N1 0xA nnn) = SetIndexRegister nnn
 decode (N3 0xD x y n) = Display x y $ fromIntegral n
+decode (N1 0x2 nnn) = Call nnn
+decode (N3 0x0 0x0 0xE 0xE) = Return
 decode _ = End
 
 -- | Converts an instruction to an opcode
@@ -84,6 +88,8 @@ encode (SetRegister x (Byte nn)) = N2 6 x nn
 encode (AddToRegister x (Byte nn)) = N2 7 x nn
 encode (SetIndexRegister nnn) = N1 0xA nnn
 encode (Display x y n) = N3 0xD x y $ fromIntegral n
+encode (Call nnn) = N1 0x2 nnn
+encode Return = N3 0x0 0x0 0xE 0xE
 encode End = N1 0xF 0xFFF
 
 -- | Converts a pair of bytes to an opcode

@@ -52,7 +52,7 @@ data State = State
     { registers :: Registers
     , indexRegister :: Address
     , programCounter :: Address
-    , stack :: [Word16]
+    , stack :: [Address]
     , delayTimer :: Word16
     , soundTimer :: Word16
     , memory :: Memory

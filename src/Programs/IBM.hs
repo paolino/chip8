@@ -1,17 +1,16 @@
 {-# LANGUAGE PatternSynonyms #-}
 
-module Programs.IBM (program) where
+module Programs.IBM (program, placeSprite_) where
 
 import Control.Monad (void)
-import Control.Monad.Free (Free)
 import Encoding
     ( AssemblyF
-    , List
     , Ref
     , i
     , i_
     , ia_
-    , l
+    , le
+    , ls
     , si
     , sprite
     )
@@ -21,14 +20,6 @@ import Opcodes
     , pattern V1
     )
 import Types (Address, Byte, Height)
-
--- | A line of an IBM sprite is always followed by an empty line
-ls :: String -> Free (List [Bool]) ()
-ls x = l x >> l (replicate 8 ' ')
-
--- | Last line of a sprite. We could use 'l' but it would not align with `ls`
-le :: String -> Free (List [Bool]) ()
-le = l
 
 -- | Place a sprite at the given coordinates, with the given height
 -- here we appreciate the power of the assembly language where we can

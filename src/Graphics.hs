@@ -32,7 +32,7 @@ pattern KeyReset :: Event
 pattern KeyReset = KeyPress 'r'
 
 speed :: Int
-speed = 10
+speed = 1
 
 headerHeight :: Row
 headerHeight = 4

@@ -47,6 +47,11 @@ step (Display x y n) cpu@State{..} =
   where
     x' = registers Map.! x
     y' = registers Map.! y
+step (Call nnn) State{..} =
+    Just $ State{stack = programCounter : stack, programCounter = nnn, ..}
+step Return State{..} = case stack of
+    [] -> Nothing
+    x : xs -> Just $ State{stack = xs, programCounter = x, ..}
 step End _ = Nothing
 
 -- | Interpret a number of instructions, returning the final state of the CPU, or

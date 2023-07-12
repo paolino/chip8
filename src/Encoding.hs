@@ -6,6 +6,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 
 module Encoding
     ( -- * types
@@ -32,6 +33,9 @@ module Encoding
     , addInstruction_
     , addAddressInstruction
     , addAddressInstruction_
+    , addRoutine
+
+      -- * sprites
     , sprite
 
       -- * example
@@ -53,19 +57,28 @@ module Encoding
     , i_
     , ia_
     , si
+    , ls
+    , le
+    , ia
+    , routine
+    , ret
+    , call
     )
 where
 
 import Control.Lens (Lens', lens)
 import Control.Monad (void)
 import Control.Monad.Free (Free (..), MonadFree, liftF)
-import Data.Bifunctor (second)
+import Data.Bifunctor (Bifunctor (bimap), second)
 import Data.Bits (Bits (shiftL, (.|.)))
 import Data.ByteString (ByteString, pack)
+import Data.Either (lefts, partitionEithers, rights)
 import Data.Foldable (foldl', toList)
+import Data.Functor (($>))
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Word (Word8)
+import Debug.Trace
 import Graphics (game)
 import Offset (memoryOffset)
 import Opcodes (Instruction (..), bytesOpcode, decode, encode, opcodeBytes)
@@ -90,6 +103,8 @@ data Assembly a where
     -- The address of the sprite will be passed to the function that generates the instruction.
     StoreAddressInstruction
         :: Ref -> (Address -> Instruction) -> (Address -> a) -> Assembly a
+    -- | Add an assembly routine to the program, returning a reference to it.
+    AddRoutine :: AssemblyF () -> (Ref -> a) -> Assembly a
 
 deriving instance Functor Assembly
 
@@ -119,6 +134,10 @@ addAddressInstruction_
     :: (MonadFree Assembly m) => Ref -> (Address -> Instruction) -> m ()
 addAddressInstruction_ ref f = void $ addAddressInstruction ref f
 
+-- | Add an assembly to the program.
+addRoutine :: (MonadFree Assembly m) => AssemblyF () -> m Ref
+addRoutine f = liftF $ AddRoutine f id
+
 -- | The state of the assembler.
 data Encoding = Encoding
     { encodingMemory :: Memory
@@ -130,8 +149,10 @@ data Encoding = Encoding
     , encodingReferences :: Map Ref [(Address, Address -> Instruction)]
     -- ^ The references of the encoding. Each reference is associated with a list of
     -- addresses and functions that generate instructions that reference the sprite
-    , encodingSprites :: Map Ref Sprite
-    -- ^ The sprites of the encoding.
+    , encodingTargets :: Map Ref (Either Sprite (AssemblyF ()))
+    -- ^ The targets of the encoding. Each reference is associated with a sprite or an
+    -- assembly routine.
+    , routineAddresses :: Map Ref Address
     }
 
 splitIn :: Int -> [a] -> [(a, a)]
@@ -156,8 +177,13 @@ instance Show Encoding where
             , encodingLastAddress
             , encodingLastReference
             , second (fmap $ fmap ($ 0)) <$> Map.assocs encodingReferences
-            , encodingSprites
+            , lefts $ (\(k, v) -> bimap (k,) (k,) v) <$> Map.assocs encodingTargets
+            , rights $ (\(k, v) -> v $> k) <$> Map.assocs encodingTargets
             )
+
+spritesAndRoutines :: Encoding -> ([(Ref, Sprite)], [(Ref, AssemblyF ())])
+spritesAndRoutines e =
+    partitionEithers $ (\(k, v) -> bimap (k,) (k,) v) <$> Map.assocs (encodingTargets e)
 
 -- | A lens over the memory of the encoding.
 encodingMemoryL :: Lens' Encoding Memory
@@ -179,10 +205,36 @@ encodingReferencesL = lens encodingReferences $ \e t -> e{encodingReferences = t
 -- | Interpret an assembly program into a change of state.
 interpreter :: AssemblyF a -> Encoding -> Encoding
 interpreter (Pure _) encoding =
-    foldl' solveRef encoding $ Map.assocs $ encodingSprites encoding
+    solveRoutines routines $ foldl' solveSprites encoding sprites
   where
-    solveRef :: Encoding -> (Ref, Sprite) -> Encoding
-    solveRef encoding' (ref, sprite') =
+    solveRoutines :: [(Ref, AssemblyF ())] -> Encoding -> Encoding
+    solveRoutines xs e =
+        let
+            pass0 = foldl' g e xs
+            g :: Encoding -> (Ref, AssemblyF ()) -> Encoding
+            g e' (ref, routine) =
+                interpreter routine
+                    $ e'
+                        { routineAddresses = Map.insert ref (encodingLastAddress e') $ routineAddresses e'
+                        , encodingTargets = Map.delete ref $ encodingTargets e'
+                        }
+            pass1 = foldl' r pass0 $ Map.assocs $ routineAddresses pass0
+            r :: Encoding -> (Ref, Address) -> Encoding
+            r e' (ref, address) = foldl' h e' $ Map.findWithDefault [] ref $ encodingReferences e'
+              where
+                h e'' (targetAddress, solveInstruction) =
+                    e''
+                        { encodingMemory =
+                            storeInstruction targetAddress (solveInstruction address)
+                                $ encodingMemory e''
+                        }
+        in
+            pass1
+    (sprites, routines') = spritesAndRoutines encoding
+    routines = traceShow (length routines') routines'
+
+    solveSprites :: Encoding -> (Ref, Sprite) -> Encoding
+    solveSprites encoding' (ref, sprite') =
         foldl' g encoding''
             $ Map.findWithDefault [] ref
             $ encodingReferences encoding'
@@ -213,6 +265,34 @@ interpreter (Free (StoreInstruction instruction f)) encoding =
 interpreter (Free (StoreAddressInstruction ref f g)) encoding =
     let (address, encoding') = pushRefInstruction ref encoding f
     in  interpreter (g address) encoding'
+interpreter (Free (AddRoutine f g)) encoding =
+    let (ref, encoding') = pushRefRourine encoding f
+    in  interpreter (g ref) encoding'
+
+_addReturn :: Encoding -> Encoding
+_addReturn encoding =
+    let
+        address = encodingLastAddress encoding
+        encoding' =
+            encoding
+                { encodingMemory =
+                    storeInstruction address Return $ encodingMemory encoding
+                , encodingLastAddress = address + 2
+                }
+    in
+        encoding'
+
+pushRefRourine :: Encoding -> AssemblyF () -> (Ref, Encoding)
+pushRefRourine encoding routine =
+    let
+        ref = encodingLastReference encoding
+        encoding' =
+            encoding
+                { encodingLastReference = encodingLastReference encoding + 1
+                , encodingTargets = Map.insert ref (Right routine) $ encodingTargets encoding
+                }
+    in
+        (ref, encoding')
 
 -- | Push a reference to a sprite into the encoding. This will leave a hole in the memory
 -- that will be filled with the instruction when the address to complete the instruction
@@ -237,8 +317,8 @@ pushRefSprite encoding sprite' =
         encoding' =
             encoding
                 { encodingLastReference = encodingLastReference encoding + 1
-                , encodingSprites =
-                    Map.insert ref sprite' $ encodingSprites encoding
+                , encodingTargets =
+                    Map.insert ref (Left sprite') $ encodingTargets encoding
                 }
     in  (ref, encoding')
 
@@ -293,7 +373,8 @@ encodingBoot address =
         , encodingLastAddress = address
         , encodingLastReference = 0
         , encodingReferences = Map.empty
-        , encodingSprites = Map.empty
+        , encodingTargets = Map.empty
+        , routineAddresses = Map.empty
         }
 
 -------------------------------------- combinators --------------------------------------
@@ -326,6 +407,14 @@ l = el . line
 sprite :: Free (List [Bool]) a -> Free Assembly Ref
 sprite = addSprite . list
 
+-- | A line of an IBM sprite is always followed by an empty line
+ls :: String -> Free (List [Bool]) ()
+ls x = l x >> l (replicate 8 ' ')
+
+-- | Last line of a sprite. We could use 'l' but it would not align with `ls`
+le :: String -> Free (List [Bool]) ()
+le = l
+
 --------------------- instruction definition support ---------------------
 
 -- | Add an instruction to the program, discarding the address.
@@ -336,6 +425,10 @@ i_ = addInstruction_
 i :: Instruction -> Free Assembly Address
 i = addInstruction
 
+-- | Add an instruction that references a sprite to the program.
+ia :: Ref -> (Address -> Instruction) -> Free Assembly Address
+ia = addAddressInstruction
+
 -- | Add an instruction that references a sprite to the program
 -- discarding the address of the instruction.
 ia_ :: Ref -> (Address -> Instruction) -> Free Assembly ()
@@ -344,6 +437,15 @@ ia_ = addAddressInstruction_
 -- | Helper to set the index register to point to a sprite.
 si :: Address -> Instruction
 si = SetIndexRegister
+
+routine :: AssemblyF () -> AssemblyF Ref
+routine = addRoutine
+
+ret :: Free Assembly ()
+ret = i_ Return
+
+call :: Ref -> Free Assembly ()
+call x = ia_ x Call
 
 --------------------- example ---------------------
 
@@ -398,4 +500,4 @@ testInterpreter :: IO ()
 testInterpreter =
     pPrint
         $ interpreter example
-        $ Encoding mempty memoryOffset 0 mempty mempty
+        $ Encoding mempty memoryOffset 0 mempty mempty mempty

@@ -13,7 +13,8 @@ main = do
     -- compile "roms/IBM Logo'.ch8"
     dumpPrograms
     -- TODO: add program selection in roms directory
-    runFile "roms/IBM Logo'.ch8"
+    -- runFile "roms/IBM Logo'.ch8"
+    runFile "roms/Subroutine.ch8"
 
 runFile :: FilePath -> IO ()
 runFile = readFile >=> playGame . game . bootState
