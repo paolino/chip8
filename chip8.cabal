@@ -25,7 +25,11 @@ source-repository head
   type:     git
   location: https://github.com/githubuser/chip8
 
+
+  
 library
+  default-extensions:
+    ImportQualifiedPost
   exposed-modules:
     Interpreter
     Graphics

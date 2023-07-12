@@ -206,13 +206,13 @@ interpreter (Pure _) encoding =
             address = encodingLastAddress encoding'
 interpreter (Free (StoreSprite sprite' f)) encoding =
     let (ref, encoding') = pushRefSprite encoding sprite'
-     in interpreter (f ref) encoding'
+    in  interpreter (f ref) encoding'
 interpreter (Free (StoreInstruction instruction f)) encoding =
     let (address, encoding') = pushInstruction encoding instruction
-     in interpreter (f address) encoding'
+    in  interpreter (f address) encoding'
 interpreter (Free (StoreAddressInstruction ref f g)) encoding =
     let (address, encoding') = pushRefInstruction ref encoding f
-     in interpreter (g address) encoding'
+    in  interpreter (g address) encoding'
 
 -- | Push a reference to a sprite into the encoding. This will leave a hole in the memory
 -- that will be filled with the instruction when the address to complete the instruction
@@ -227,7 +227,7 @@ pushRefInstruction ref encoding f =
                     Map.insertWith (<>) ref [(address, f)]
                         $ encodingReferences encoding
                 }
-     in (address, encoding')
+    in  (address, encoding')
 
 -- | Push a sprite into the encoding. The sprite is not stored in memory yet, but a reference
 -- to it is returned while the sprite is stored in the encoding.
@@ -240,7 +240,7 @@ pushRefSprite encoding sprite' =
                 , encodingSprites =
                     Map.insert ref sprite' $ encodingSprites encoding
                 }
-     in (ref, encoding')
+    in  (ref, encoding')
 
 -- | Push an instruction into memory and return the address of it. This instruction is not
 -- needing a sprite address to be completed.
@@ -254,7 +254,7 @@ pushInstruction encoding instruction =
                     storeInstruction address instruction
                         $ encodingMemory encoding
                 }
-     in (address, encoding')
+    in  (address, encoding')
 
 -- | Store a sprite in memory.
 storeSprite :: Sprite -> Address -> Memory -> Memory

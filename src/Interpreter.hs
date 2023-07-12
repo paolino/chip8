@@ -20,7 +20,8 @@ import Prelude hiding (readFile)
 -- Nothing if the program has ended
 interpret :: State -> Maybe State
 interpret State{..} =
-    step (decode $ retrieveInstruction programCounter memory)
+    step
+        (decode $ retrieveInstruction programCounter memory)
         State{programCounter = programCounter + 2, ..}
 
 step :: Instruction -> State -> Maybe State
@@ -36,7 +37,7 @@ step (SetIndexRegister nnn) State{..} =
     Just $ State{indexRegister = nnn, ..}
 step (Display x y n) cpu@State{..} =
     let (changed, display') = pasteSprite (Coo x' y') (readSprite n cpu) display
-     in Just
+    in  Just
             $ State
                 { display = display'
                 , registers =

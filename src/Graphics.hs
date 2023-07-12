@@ -86,7 +86,7 @@ game s = Game 50 start step displayGame
                     Run -> Pause
                     Step -> Pause
                     End -> End
-             in
+            in
                 GameState run' state count
         KeyStep ->
             let
@@ -95,7 +95,7 @@ game s = Game 50 start step displayGame
                     Run -> Step
                     Step -> Pause
                     End -> End
-             in
+            in
                 GameState run' state count
         KeyQuit -> GameState Quit state count
         KeyReset -> GameState Reset state count
@@ -105,26 +105,26 @@ displayGame :: GEnv -> GameState -> Plane
 displayGame _ (GameState run state count) =
     blankPlane 64 gameHeight
         & (header, 1)
-        % drawPaused run
-        # bold
+            % drawPaused run
+                # bold
         --
         & (header, 12)
-        % drawCount count
+            % drawCount count
         --
         & (header, 32)
-        % help
+            % help
         --
         & (headerLine, 1)
-        % drawLine 64
+            % drawLine 64
         --
         & (window, 1)
-        % drawStateDisplay state
+            % drawStateDisplay state
         --
         & (footerLine, 1)
-        % drawLine 64
+            % drawLine 64
         --
         & (footer, 1)
-        % drawState state
+            % drawState state
 
 drawCount :: Int -> Plane
 drawCount = stringPlane . ("at step " <>) . show

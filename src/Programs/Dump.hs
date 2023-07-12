@@ -8,7 +8,7 @@ import Encoding
     , offloadMemory
     )
 import Offset (memoryOffset)
-import qualified Programs.IBM as IBM
+import Programs.IBM qualified as IBM
 import Prelude hiding (writeFile)
 
 encode :: AssemblyF () -> ByteString
