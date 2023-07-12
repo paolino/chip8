@@ -100,9 +100,10 @@ pasteSprite (Coo x y) sprite display = foldl' xor' (False, display) $ do
         let
             p' = Map.findWithDefault False coo d
             p'' = p' `xor` p
-            v' = p' /= p''
         in
-            (v || v', Map.insert coo p'' d)
+            -- v' = p' /= p''
+
+            (v || (p && p'), Map.insert coo p'' d)
 
 retrieveInstruction :: Address -> Memory -> Opcode
 retrieveInstruction n m =

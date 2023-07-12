@@ -5,7 +5,11 @@
 
 module Interpreter (interpret, interpretN) where
 
+import Data.Bits (Bits (shiftL, shiftR, xor, (.&.)), (.|.))
+import Data.Foldable (foldl')
+import Data.List (unfoldr)
 import Data.Map qualified as Map
+import Data.Tuple (swap)
 import Opcodes (Instruction (..), decode)
 import State
     ( State (..)
@@ -13,7 +17,7 @@ import State
     , readSprite
     , retrieveInstruction
     )
-import Types (Coo (..), pattern VF)
+import Types (Address, Byte, Coo (..), Memory, Nibble, Registers, pattern VF)
 import Prelude hiding (readFile)
 
 -- | Interpret a single instruction, returning the new state of the CPU, or
@@ -33,6 +37,61 @@ step (SetRegister x nn) State{..} =
     Just $ State{registers = Map.insert x nn registers, ..}
 step (AddToRegister x nn) State{..} =
     Just $ State{registers = Map.insertWith (+) x nn registers, ..}
+step (SkipIfEq x nn) State{..} =
+    Just
+        $ if readR x registers == nn
+            then State{programCounter = programCounter + 2, ..}
+            else State{..}
+step (SkipIfNotEq x nn) State{..} =
+    Just
+        $ if readR x registers /= nn
+            then State{programCounter = programCounter + 2, ..}
+            else State{..}
+step (SkipIfEqR x y) State{..} =
+    Just
+        $ if readR x registers == readR y registers
+            then State{programCounter = programCounter + 2, ..}
+            else State{..}
+step (SkipIfNotEqR x y) State{..} =
+    Just
+        $ if readR x registers /= readR y registers
+            then State{programCounter = programCounter + 2, ..}
+            else State{..}
+step (CopyR x y) State{..} =
+    Just $ State{registers = Map.insert x (readR y registers) registers, ..}
+step (Or x y) State{..} =
+    Just $ State{registers = Map.insert x (readR x registers .|. readR y registers) registers, ..}
+step (And x y) State{..} =
+    Just $ State{registers = Map.insert x (readR x registers .&. readR y registers) registers, ..}
+step (Xor x y) State{..} =
+    Just $ State{registers = Map.insert x (readR x registers `xor` readR y registers) registers, ..}
+step (Add x y) State{..} =
+    let x' = readR x registers
+        y' = readR y registers
+        vf = if y' > 0xFF - x' then 0x1 else 0x0
+    in  Just $ State{registers = Map.insert VF vf . Map.insert x (x' + y') $ registers, ..}
+step (Sub x y) State{..} =
+    let x' = readR x registers
+        y' = readR y registers
+        vf = if x' > y' then 0x1 else 0x0
+    in  Just $ State{registers = Map.insert VF vf . Map.insert x (x' - y') $ registers, ..}
+step (SubN x y) s = step (Sub y x) s
+step (ShiftR x _) State{..} =
+    let x' = readR x registers
+        vf = if x' .&. 0x1 > 0 then 0x1 else 0x0
+    in  Just $ State{registers = Map.insert x (shiftR x' 1) . Map.insert VF vf $ registers, ..}
+step (ShiftL x _) State{..} =
+    let x' = readR x registers
+        vf = if x' .&. 0x80 > 0 then 0x1 else 0x0
+    in  Just $ State{registers = Map.insert x (shiftL x' 1) . Map.insert VF vf $ registers, ..}
+step (Load x) State{..} =
+    Just $ State{registers = foldl' (\r (k, y) -> Map.insert k y r) registers [(i, readM (indexRegister + fromIntegral i) memory) | i <- [0 .. x]], ..}
+step (Store x) State{..} =
+    Just $ State{memory = foldl' (\m (k, y) -> Map.insert k y m) memory [(indexRegister + fromIntegral i, readR i registers) | i <- [0 .. x]], ..}
+step (StoreBCD x) State{..} =
+    Just $ State{memory = foldl' (\m (k, y) -> Map.insert k y m) memory (zip [0 ..] (bcd $ readR x registers)), ..}
+step (AddToIndexRegister x) State{..} =
+    Just $ State{indexRegister = indexRegister + fromIntegral (readR x registers), ..}
 step (SetIndexRegister nnn) State{..} =
     Just $ State{indexRegister = nnn, ..}
 step (Display x y n) cpu@State{..} =
@@ -40,8 +99,7 @@ step (Display x y n) cpu@State{..} =
     in  Just
             $ State
                 { display = display'
-                , registers =
-                    Map.insert VF (if changed then 1 else 0) registers
+                , registers = Map.insert VF (if changed then 1 else 0) registers
                 , ..
                 }
   where
@@ -59,3 +117,15 @@ step End _ = Nothing
 interpretN :: Int -> State -> Maybe State
 interpretN 0 cpu = Just cpu
 interpretN n cpu = interpret cpu >>= interpretN (n - 1)
+
+bcd :: Byte -> [Byte]
+bcd x = reverse $ unfoldr split x
+  where
+    split 0 = Nothing
+    split n = Just $ swap $ divMod n 10
+
+readR :: Nibble -> Registers -> Byte
+readR = Map.findWithDefault 0
+
+readM :: Address -> Memory -> Byte
+readM = Map.findWithDefault 0

@@ -22,6 +22,23 @@ data Instruction
     | Jump Address
     | SetRegister Nibble Byte
     | AddToRegister Nibble Byte
+    | SkipIfEq Nibble Byte
+    | SkipIfNotEq Nibble Byte
+    | SkipIfEqR Nibble Nibble
+    | SkipIfNotEqR Nibble Nibble
+    | CopyR Nibble Nibble
+    | Or Nibble Nibble
+    | And Nibble Nibble
+    | Xor Nibble Nibble
+    | Add Nibble Nibble
+    | Sub Nibble Nibble
+    | SubN Nibble Nibble
+    | ShiftR Nibble Nibble
+    | ShiftL Nibble Nibble
+    | Load Nibble
+    | Store Nibble
+    | StoreBCD Nibble
+    | AddToIndexRegister Nibble
     | SetIndexRegister Address
     | Display Nibble Nibble Height
     | Call Address
@@ -71,9 +88,26 @@ pattern N3 x y z w <- (nibble3 -> (x, y, z, w))
 -- | Converts an opcode to an instruction
 decode :: Opcode -> Instruction
 decode ClearScreen' = ClearScreen
-decode (N1 1 nnn) = Jump nnn
-decode (N2 6 x nn) = SetRegister x $ Byte nn
-decode (N2 7 x nn) = AddToRegister x $ Byte nn
+decode (N1 0x1 nnn) = Jump nnn
+decode (N2 0x6 x nn) = SetRegister x $ Byte nn
+decode (N2 0x7 x nn) = AddToRegister x $ Byte nn
+decode (N2 0x3 x nn) = SkipIfEq x $ Byte nn
+decode (N2 0x4 x nn) = SkipIfNotEq x $ Byte nn
+decode (N3 0x5 x y 0x0) = SkipIfEqR x y
+decode (N3 0x9 x y 0x0) = SkipIfNotEqR x y
+decode (N3 0x8 x y 0x0) = CopyR x y
+decode (N3 0x8 x y 0x1) = Or x y
+decode (N3 0x8 x y 0x2) = And x y
+decode (N3 0x8 x y 0x3) = Xor x y
+decode (N3 0x8 x y 0x4) = Add x y
+decode (N3 0x8 x y 0x5) = Sub x y
+decode (N3 0x8 x y 0x7) = SubN x y
+decode (N3 0x8 x y 0x6) = ShiftR x y
+decode (N3 0x8 x y 0xE) = ShiftL x y
+decode (N3 0xF x 0x6 0x5) = Load x
+decode (N3 0xF x 0x5 0x5) = Store x
+decode (N3 0xF x 0x3 0x3) = StoreBCD x
+decode (N3 0xF x 0x1 0xE) = AddToIndexRegister x
 decode (N1 0xA nnn) = SetIndexRegister nnn
 decode (N3 0xD x y n) = Display x y $ fromIntegral n
 decode (N1 0x2 nnn) = Call nnn
@@ -83,9 +117,26 @@ decode _ = End
 -- | Converts an instruction to an opcode
 encode :: Instruction -> Opcode
 encode ClearScreen = ClearScreen'
-encode (Jump nnn) = N1 1 nnn
-encode (SetRegister x (Byte nn)) = N2 6 x nn
-encode (AddToRegister x (Byte nn)) = N2 7 x nn
+encode (Jump nnn) = N1 0x1 nnn
+encode (SetRegister x (Byte nn)) = N2 0x6 x nn
+encode (AddToRegister x (Byte nn)) = N2 0x7 x nn
+encode (SkipIfEq x (Byte nn)) = N2 0x3 x nn
+encode (SkipIfNotEq x (Byte nn)) = N2 0x4 x nn
+encode (SkipIfEqR x y) = N3 0x5 x y 0x0
+encode (SkipIfNotEqR x y) = N3 0x9 x y 0x0
+encode (CopyR x y) = N3 0x8 x y 0x0
+encode (Or x y) = N3 0x8 x y 0x1
+encode (And x y) = N3 0x8 x y 0x2
+encode (Xor x y) = N3 0x8 x y 0x3
+encode (Add x y) = N3 0x8 x y 0x4
+encode (Sub x y) = N3 0x8 x y 0x5
+encode (SubN x y) = N3 0x8 x y 0x7
+encode (ShiftR x y) = N3 0x8 x y 0x6
+encode (ShiftL x y) = N3 0x8 x y 0xE
+encode (Load x) = N3 0xF x 0x6 0x5
+encode (Store x) = N3 0xF x 0x5 0x5
+encode (StoreBCD x) = N3 0xF x 0x3 0x3
+encode (AddToIndexRegister x) = N3 0xF x 0x1 0xE
 encode (SetIndexRegister nnn) = N1 0xA nnn
 encode (Display x y n) = N3 0xD x y $ fromIntegral n
 encode (Call nnn) = N1 0x2 nnn
