@@ -13,11 +13,15 @@ import Data.Tuple (swap)
 import Opcodes (Instruction (..), decode)
 import State
     ( State (..)
+    , keyPressed
     , pasteSprite
+    , readK
+    , readM
+    , readR
     , readSprite
     , retrieveInstruction
     )
-import Types (Address, Byte, Coo (..), Memory, Nibble, Registers, pattern VF)
+import Types (Byte, Coo (..), pattern VF)
 import Prelude hiding (readFile)
 
 -- | Interpret a single instruction, returning the new state of the CPU, or
@@ -96,6 +100,27 @@ step (StoreBCD x) State{..} =
     Just $ State{memory = foldl' (\m (k, y) -> Map.insert k y m) memory (zip [0 ..] (bcd $ readR x registers)), ..}
 step (AddToIndexRegister x) State{..} =
     Just $ State{indexRegister = indexRegister + fromIntegral (readR x registers), ..}
+step (SetDelayTimer x) State{..} =
+    Just $ State{delayTimer = readR x registers, ..}
+step (LoadDelayTimer x) State{..} =
+    Just $ State{registers = Map.insert x delayTimer registers, ..}
+step (SkipIfKeyPressed x) State{..} =
+    -- NOTE: reset the current key flag, assume only one key is active at time
+    -- TODO: make a proper conversion between Byte out of registry and Nibble
+    Just
+        $ if readK (fromIntegral $ readR x registers) keys
+            then State{programCounter = programCounter + 2, keys = Map.empty, ..}
+            else State{..}
+step (SkipIfNotKeyPressed x) State{..} =
+    -- TODO: make a proper conversion between Byte out of registry and Nibble
+    Just
+        $ if readK (fromIntegral $ readR x registers) keys
+            then State{keys = Map.empty, ..}
+            else State{programCounter = programCounter + 2, ..}
+step (WaitForKey x) State{..} =
+    Just $ case keyPressed keys of
+        Nothing -> State{programCounter = programCounter - 2, ..}
+        Just k -> State{registers = Map.insert x (fromIntegral k) registers, ..}
 step (SetIndexRegister nnn) State{..} =
     Just $ State{indexRegister = nnn, ..}
 step (Display x y n) cpu@State{..} =
@@ -127,9 +152,3 @@ bcd x = reverse $ unfoldr split x
   where
     split 0 = Nothing
     split n = Just $ swap $ divMod n 10
-
-readR :: Nibble -> Registers -> Byte
-readR = Map.findWithDefault 0
-
-readM :: Address -> Memory -> Byte
-readM = Map.findWithDefault 0

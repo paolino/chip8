@@ -40,6 +40,11 @@ data Instruction
     | StoreBCD Nibble
     | AddToIndexRegister Nibble
     | SetIndexRegister Address
+    | SetDelayTimer Nibble
+    | LoadDelayTimer Nibble
+    | SkipIfKeyPressed Nibble
+    | SkipIfNotKeyPressed Nibble
+    | WaitForKey Nibble
     | Display Nibble Nibble Height
     | Call Address
     | Return
@@ -108,6 +113,11 @@ decode (N3 0xF x 0x6 0x5) = Load x
 decode (N3 0xF x 0x5 0x5) = Store x
 decode (N3 0xF x 0x3 0x3) = StoreBCD x
 decode (N3 0xF x 0x1 0xE) = AddToIndexRegister x
+decode (N3 0xF x 0x1 0x5) = SetDelayTimer x
+decode (N3 0xF x 0x0 0x7) = LoadDelayTimer x
+decode (N3 0xE x 0x9 0xE) = SkipIfKeyPressed x
+decode (N3 0xE x 0xA 0x1) = SkipIfNotKeyPressed x
+decode (N3 0xF x 0x0 0xA) = WaitForKey x
 decode (N1 0xA nnn) = SetIndexRegister nnn
 decode (N3 0xD x y n) = Display x y $ fromIntegral n
 decode (N1 0x2 nnn) = Call nnn
@@ -137,6 +147,11 @@ encode (Load x) = N3 0xF x 0x6 0x5
 encode (Store x) = N3 0xF x 0x5 0x5
 encode (StoreBCD x) = N3 0xF x 0x3 0x3
 encode (AddToIndexRegister x) = N3 0xF x 0x1 0xE
+encode (SetDelayTimer x) = N3 0xF x 0x1 0x5
+encode (LoadDelayTimer x) = N3 0xF x 0x0 0x7
+encode (SkipIfKeyPressed x) = N3 0xE x 0x9 0xE
+encode (SkipIfNotKeyPressed x) = N3 0xE x 0xA 0x1
+encode (WaitForKey x) = N3 0xF x 0x0 0xA
 encode (SetIndexRegister nnn) = N1 0xA nnn
 encode (Display x y n) = N3 0xD x y $ fromIntegral n
 encode (Call nnn) = N1 0x2 nnn

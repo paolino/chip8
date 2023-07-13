@@ -6,6 +6,7 @@ module Types
     ( Memory
     , Registers
     , Display
+    , Keys
     , Sprite
     , Height (..)
     , Nibble (..)
@@ -40,6 +41,8 @@ newtype Byte = Byte Word8
     deriving newtype (Show, Eq, Integral, Real, Enum, Num, Ord, Bits)
 
 type Memory = Map Address Byte
+
+type Keys = Map Nibble Bool
 
 type Registers = Map Nibble Byte
 
