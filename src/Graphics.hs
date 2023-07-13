@@ -2,8 +2,10 @@
 
 module Graphics (game) where
 
+import Data.Char (isDigit, isHexDigit, ord, toLower)
+import Data.Map qualified as Map
 import Interpreter (interpretN)
-import State (State, render, renderState)
+import State (State (..), decreaseTimers, render, renderState)
 import Terminal.Game
     ( Event (KeyPress, Tick)
     , GEnv
@@ -17,6 +19,7 @@ import Terminal.Game
     , (%)
     , (&)
     )
+import Types (Nibble)
 
 data Run = Pause | Run | Step | Quit | End | Reset
 
@@ -30,6 +33,10 @@ pattern KeyQuit :: Event
 pattern KeyQuit = KeyPress 'q'
 pattern KeyReset :: Event
 pattern KeyReset = KeyPress 'r'
+pattern KeyKeypad :: Char -> Event
+pattern KeyKeypad c <- KeyPress c
+    where
+        KeyKeypad c = KeyPress c
 
 speed :: Int
 speed = 1
@@ -62,6 +69,12 @@ gameHeight = headerHeight + windowHeight + footerHeight + 2
   where
     footerHeight = 8
 
+hexDigit :: Char -> Nibble
+hexDigit c
+    | isDigit c = fromIntegral $ ord c - ord '0'
+    | isHexDigit c = fromIntegral $ ord (toLower c) - ord 'a' + 10
+    | otherwise = error $ "Char `" <> [c] <> "` is not an hex digit"
+
 game :: State -> Game GameState ()
 game s = Game 50 start step displayGame
   where
@@ -72,7 +85,7 @@ game s = Game 50 start step displayGame
     step _ (GameState run state count) Tick =
         case interpretN speed state of
             Nothing -> Right $ GameState Pause state count
-            Just state' -> Right $ GameState run' state' $ count + speed
+            Just state' -> Right $ GameState run' (decreaseTimers state') $ count + speed
       where
         run' = case run of
             Run -> Run
@@ -99,6 +112,11 @@ game s = Game 50 start step displayGame
                 GameState run' state count
         KeyQuit -> GameState Quit state count
         KeyReset -> GameState Reset state count
+        KeyKeypad n
+            | isHexDigit n ->
+                -- NOTE: why use Map.empty? Only one key can be pressed at time to overcome
+                -- the shortcoming of the library which doesn't support KeyRelease event
+                GameState run state{keys = Map.insert (hexDigit n) True Map.empty} count
         _ -> old
 
 displayGame :: GEnv -> GameState -> Plane

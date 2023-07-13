@@ -8,8 +8,13 @@ module State
     , readSprite
     , pasteSprite
     , retrieveInstruction
+    , decreaseTimers
     , render
     , renderState
+    , readR
+    , readM
+    , readK
+    , keyPressed
     ) where
 
 import Data.Bits (Bits (..))
@@ -18,7 +23,6 @@ import Data.ByteString qualified as B
 import Data.Foldable (foldl')
 import Data.List (intercalate)
 import Data.Map qualified as Map
-import Data.Word (Word16)
 import Numeric (showHex)
 import Offset (addHeaderSpace, memoryOffset)
 import Opcodes (decode)
@@ -28,7 +32,9 @@ import Types
     , Coo (..)
     , Display
     , Height
+    , Keys
     , Memory
+    , Nibble
     , Opcode
     , Registers
     , Sprite
@@ -44,6 +50,7 @@ renderState State{..} =
         , "ST: " <> show soundTimer
         , "SP: " <> show stack
         , "Registers: " <> show registers
+        , "Keys: " <> show keys
         , "Opcode: " <> showHex (retrieveInstruction programCounter memory) ""
         , "Instruction: " <> show (decode $ retrieveInstruction programCounter memory)
         ]
@@ -53,10 +60,11 @@ data State = State
     , indexRegister :: Address
     , programCounter :: Address
     , stack :: [Address]
-    , delayTimer :: Word16
-    , soundTimer :: Word16
+    , delayTimer :: Byte
+    , soundTimer :: Byte
     , memory :: Memory
     , display :: Display
+    , keys :: Keys
     }
     deriving (Show, Eq)
 
@@ -79,6 +87,29 @@ bootState program =
         , soundTimer = 0
         , memory = loadProgram program
         , display = Map.empty
+        , keys = Map.empty
+        }
+
+readR :: Nibble -> Registers -> Byte
+readR = Map.findWithDefault 0
+
+readK :: Nibble -> Keys -> Bool
+readK = Map.findWithDefault False
+
+readM :: Address -> Memory -> Byte
+readM = Map.findWithDefault 0
+
+keyPressed :: Keys -> Maybe Nibble
+keyPressed ks = case Map.keys ks of
+    [k] -> Just k
+    _ -> Nothing
+
+decreaseTimers :: State -> State
+decreaseTimers State{..} =
+    State
+        { delayTimer = if delayTimer == 0 then 0 else delayTimer - 1
+        , soundTimer = if soundTimer == 0 then 0 else soundTimer - 1
+        , ..
         }
 
 readSprite :: Height -> State -> Sprite
