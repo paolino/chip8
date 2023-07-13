@@ -3,7 +3,8 @@ module Main (main) where
 import Control.Monad ((>=>))
 import Data.ByteString (readFile)
 import Graphics (game)
-import Programs.Dump (dumpPrograms)
+-- import Programs.Dump (dumpPrograms)
+import Rendering (run, testApplication)
 import State (bootState)
 import Terminal.Game (playGame)
 import Prelude hiding (readFile)
@@ -16,8 +17,9 @@ main = do
     -- runFile "roms/IBM Logo'.ch8"
     -- runFile "roms/Subroutine.ch8"
     -- runFile "roms/3-corax+.ch8"
-   --  runFile "roms/4-flags.ch8"
-    runFile "roms/5-quirks.ch8"
+    --  runFile "roms/4-flags.ch8"
+    -- runFile "roms/5-quirks.ch8"
+    run testApplication
 
 runFile :: FilePath -> IO ()
 runFile = readFile >=> playGame . game . bootState
