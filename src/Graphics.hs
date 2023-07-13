@@ -8,7 +8,7 @@ import Data.Map (findWithDefault)
 import Interpreter (interpretN)
 import Rendering (Application (..), pattern KeyPressed)
 import SDL
-    ( Event
+    ( Event (..)
     , Point (..)
     , Rectangle (..)
     , Renderer
@@ -21,7 +21,7 @@ import SDL
     , pattern KeycodeQ
     , pattern KeycodeR
     , pattern KeycodeReturn
-    , pattern KeycodeSpace
+    , pattern KeycodeSpace, EventPayload (..)
     )
 import State (State (display), renderState)
 import Types (Coo (..))
@@ -52,6 +52,7 @@ consumeEvent state0 old@(GameState run state count) c = case c of
         in  Right $ GameState run' state count
     KeyPressed KeycodeQ -> Left "Quit"
     KeyPressed KeycodeR -> Right $ GameState run state0 0
+    Event _ (WindowClosedEvent _) -> Left "Quit"
     _ -> Right old
 
 renderStateLines :: GameState -> [String]
