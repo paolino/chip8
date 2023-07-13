@@ -1,36 +1,32 @@
 {-# LANGUAGE PatternSynonyms #-}
 
-module Graphics (game) where
+module Graphics where
 
+import Control.Monad (when)
+import Data.Map (findWithDefault)
 import Interpreter (interpretN)
-import State (State, render, renderState)
-import Terminal.Game
-    ( Event (KeyPress, Tick)
-    , GEnv
-    , Game (Game)
-    , Plane
-    , Row
-    , blankPlane
-    , bold
-    , stringPlane
-    , (#)
-    , (%)
-    , (&)
+import Rendering (Application (..), pattern KeyPressed)
+import SDL
+    ( Event
+    
+    , Point (..)
+    , Rectangle (..)
+    , Renderer
+    , V2 (..)
+    , fillRect
+    , pattern KeycodeQ
+    , pattern KeycodeR
+    , pattern KeycodeReturn
+    , pattern KeycodeSpace
     )
+import State (State (display), renderState)
+import Types (Coo (..))
 
 data Run = Pause | Run | Step | Quit | End | Reset
 
 data GameState = GameState {_paused :: Run, _state :: State, _count :: Int}
 
-pattern KeyPause :: Event
-pattern KeyPause = KeyPress ' '
-pattern KeyStep :: Event
-pattern KeyStep = KeyPress '\n'
-pattern KeyQuit :: Event
-pattern KeyQuit = KeyPress 'q'
-pattern KeyReset :: Event
-pattern KeyReset = KeyPress 'r'
-
+type Row = Int
 speed :: Int
 speed = 1
 
@@ -62,45 +58,73 @@ gameHeight = headerHeight + windowHeight + footerHeight + 2
   where
     footerHeight = 8
 
-game :: State -> Game GameState ()
-game s = Game 50 start step displayGame
-  where
-    start = GameState Pause s 0
-    step _ (GameState Quit _ _) _ = Left ()
-    step _ (GameState Reset _ _) _ = Right start
-    step _ old@(GameState Pause _ _) Tick = Right old
-    step _ (GameState run state count) Tick =
-        case interpretN speed state of
-            Nothing -> Right $ GameState Pause state count
-            Just state' -> Right $ GameState run' state' $ count + speed
-      where
-        run' = case run of
-            Run -> Run
-            Step -> Pause
-            End -> End
-    step _ old@(GameState run state count) c = Right $ case c of
-        KeyPause ->
-            let
-                run' = case run of
-                    Pause -> Run
-                    Run -> Pause
-                    Step -> Pause
-                    End -> End
-            in
-                GameState run' state count
-        KeyStep ->
-            let
-                run' = case run of
-                    Pause -> Step
-                    Run -> Step
-                    Step -> Pause
-                    End -> End
-            in
-                GameState run' state count
-        KeyQuit -> GameState Quit state count
-        KeyReset -> GameState Reset state count
-        _ -> old
+consumeEvent :: GameState -> Event -> Either a GameState
+consumeEvent old@(GameState run state count) c = Right $ case c of
+    KeyPressed KeycodeSpace ->
+        let
+            run' = case run of
+                Pause -> Run
+                Run -> Pause
+                Step -> Pause
+                x -> x
+        in
+            GameState run' state count
+    KeyPressed KeycodeReturn ->
+        let
+            run' = case run of
+                Pause -> Step
+                Run -> Step
+                Step -> Pause
+                x -> x
+        in
+            GameState run' state count
+    KeyPressed KeycodeQ -> GameState Quit state count
+    KeyPressed KeycodeR -> GameState Reset state count
+    _ -> old
 
+renderStateLines :: State -> [String]
+renderStateLines = lines . renderState
+
+updateState :: GameState -> (GameState, [String])
+updateState (GameState Quit state count) = (GameState Quit state count, renderStateLines state)
+updateState (GameState Reset state count) = (GameState Reset state count, renderStateLines state)
+updateState old@(GameState Pause state _) = (old, renderStateLines state)
+updateState (GameState run state count) =
+    case interpretN speed state of
+        Nothing -> (GameState Pause state count, renderStateLines state)
+        Just state' -> (GameState run' state' $ count + speed, renderStateLines state)
+  where
+    run' = case run of
+        Run -> Run
+        Step -> Pause
+        End -> End
+
+chip8Application :: State -> Application GameState
+chip8Application state =
+    Application
+        { appDraw = drawGame
+        , appUpdate = updateState
+        , appHandleEvent = consumeEvent
+        , appInitialState = GameState Run state 0
+        , appSleep = 20000
+        }
+
+drawGame :: Renderer -> GameState -> IO ()
+drawGame renderer (GameState _run state _count) = sequence_ $ do
+    y <- [0 .. 31]
+    x <- [0 .. 63]
+    pure
+        $ when
+            (findWithDefault False (Coo x y) $ display state)
+            ( fillRect
+                renderer
+                $ Just
+                $ Rectangle 
+                    (P $ V2 (fromIntegral x * 10) (fromIntegral y * 10)) 
+                    (V2 10 10)
+            )
+
+{-
 displayGame :: GEnv -> GameState -> Plane
 displayGame _ (GameState run state count) =
     blankPlane 64 gameHeight
@@ -156,3 +180,4 @@ help =
             , "Press q to quit"
             , "Press r to reset"
             ]
+ -}

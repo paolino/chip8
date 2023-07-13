@@ -141,7 +141,7 @@ pattern KeyReleased x <-
 testApplication :: Application TestApplicationState
 testApplication =
     Application
-        { appDraw = \renderer State{..} -> do
+        { appDraw = \renderer _ -> do
             x <- randomRIO (0, 800)
             y <- randomRIO (0, 600)
             rendererDrawColor renderer $= V4 0 0 255 255
@@ -167,8 +167,9 @@ loop console renderer Application{..} = go appInitialState
         case ms' of
             Left l -> console ([l], False)
             Right s' -> do
+            
                 let (s'', ls) = appUpdate s'
-                console (ls, True)
+                console (ls <> [show $ length events], True)
                 appDraw renderer s''
                 present renderer
                 threadDelay appSleep

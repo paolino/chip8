@@ -40,8 +40,6 @@ module Encoding
 
       -- * example
     , exampleProgram
-    , testProgram
-    , testInterpreter
 
       -- * combinators
     , List (..)
@@ -79,12 +77,8 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Word (Word8)
 import Debug.Trace
-import Graphics (game)
 import Offset (memoryOffset)
 import Opcodes (Instruction (..), bytesOpcode, decode, encode, opcodeBytes)
-import State (bootState)
-import Terminal.Game (playGame)
-import Text.Pretty.Simple (pPrint)
 import Types (Address, Byte (..), Memory, Sprite)
 
 -- | A reference to a sprite.
@@ -493,7 +487,7 @@ encodingExample = interpreter example $ encodingBoot 0
 exampleProgram :: ByteString
 exampleProgram = offloadMemory $ encodingMemory encodingExample
 
-testProgram :: IO ()
+{- testProgram :: IO ()
 testProgram = playGame . game . bootState $ exampleProgram
 
 testInterpreter :: IO ()
@@ -501,3 +495,4 @@ testInterpreter =
     pPrint
         $ interpreter example
         $ Encoding mempty memoryOffset 0 mempty mempty mempty
+ -}
