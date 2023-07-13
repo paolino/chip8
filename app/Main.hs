@@ -11,10 +11,13 @@ import Prelude hiding (readFile)
 main :: IO ()
 main = do
     -- compile "roms/IBM Logo'.ch8"
-    dumpPrograms
+    -- dumpPrograms
     -- TODO: add program selection in roms directory
     -- runFile "roms/IBM Logo'.ch8"
-    runFile "roms/Subroutine.ch8"
+    -- runFile "roms/Subroutine.ch8"
+    -- runFile "roms/3-corax+.ch8"
+   --  runFile "roms/4-flags.ch8"
+    runFile "roms/5-quirks.ch8"
 
 runFile :: FilePath -> IO ()
 runFile = readFile >=> playGame . game . bootState
