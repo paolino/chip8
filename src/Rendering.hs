@@ -75,7 +75,7 @@ wc =
         , windowGraphicsContext = NoGraphicsContext
         , windowPosition = Wherever
         , windowResizable = False
-        , windowInitialSize = V2 800 600
+        , windowInitialSize = V2 640 320
         , windowVisible = True
         }
 
