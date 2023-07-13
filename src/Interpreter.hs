@@ -105,17 +105,14 @@ step (SetDelayTimer x) State{..} =
 step (LoadDelayTimer x) State{..} =
     Just $ State{registers = Map.insert x delayTimer registers, ..}
 step (SkipIfKeyPressed x) State{..} =
-    -- NOTE: reset the current key flag, assume only one key is active at time
-    -- TODO: make a proper conversion between Byte out of registry and Nibble
     Just
         $ if readK (fromIntegral $ readR x registers) keys
-            then State{programCounter = programCounter + 2, keys = Map.empty, ..}
+            then State{programCounter = programCounter + 2, ..}
             else State{..}
 step (SkipIfNotKeyPressed x) State{..} =
-    -- TODO: make a proper conversion between Byte out of registry and Nibble
     Just
         $ if readK (fromIntegral $ readR x registers) keys
-            then State{keys = Map.empty, ..}
+            then State{..}
             else State{programCounter = programCounter + 2, ..}
 step (WaitForKey x) State{..} =
     Just $ case keyPressed keys of

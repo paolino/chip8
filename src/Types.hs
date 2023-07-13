@@ -42,7 +42,7 @@ newtype Byte = Byte Word8
 
 type Memory = Map Address Byte
 
-type Keys = Map Nibble Bool
+type Keys = Map Nibble Integer
 
 type Registers = Map Nibble Byte
 

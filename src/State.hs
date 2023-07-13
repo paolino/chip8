@@ -15,6 +15,8 @@ module State
     , readM
     , readK
     , keyPressed
+    , releaseKeys
+    , tickClock
     ) where
 
 import Data.Bits (Bits (..))
@@ -65,6 +67,7 @@ data State = State
     , memory :: Memory
     , display :: Display
     , keys :: Keys
+    , clock :: Integer
     }
     deriving (Show, Eq)
 
@@ -88,21 +91,31 @@ bootState program =
         , memory = loadProgram program
         , display = Map.empty
         , keys = Map.empty
+        , clock = 0
         }
 
 readR :: Nibble -> Registers -> Byte
 readR = Map.findWithDefault 0
 
 readK :: Nibble -> Keys -> Bool
-readK = Map.findWithDefault False
+readK k ks = Map.findWithDefault (-1) k ks >= 0
 
 readM :: Address -> Memory -> Byte
 readM = Map.findWithDefault 0
 
 keyPressed :: Keys -> Maybe Nibble
 keyPressed ks = case Map.keys ks of
-    [k] -> Just k
+    k : _ -> Just k
     _ -> Nothing
+
+releaseKeys :: Integer -> State -> State
+releaseKeys timeout State{..} =
+    State
+        { keys = Map.filter (not . expired) keys
+        , ..
+        }
+  where
+    expired ts = ts + timeout < clock
 
 decreaseTimers :: State -> State
 decreaseTimers State{..} =
@@ -111,6 +124,10 @@ decreaseTimers State{..} =
         , soundTimer = if soundTimer == 0 then 0 else soundTimer - 1
         , ..
         }
+
+tickClock :: State -> State
+tickClock State{..} =
+    State{clock = clock + 1, ..}
 
 readSprite :: Height -> State -> Sprite
 readSprite h State{..} = do
@@ -132,8 +149,6 @@ pasteSprite (Coo x y) sprite display = foldl' xor' (False, display) $ do
             p' = Map.findWithDefault False coo d
             p'' = p' `xor` p
         in
-            -- v' = p' /= p''
-
             (v || (p && p'), Map.insert coo p'' d)
 
 retrieveInstruction :: Address -> Memory -> Opcode

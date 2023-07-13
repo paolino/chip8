@@ -5,7 +5,7 @@ module Graphics (game) where
 import Data.Char (isDigit, isHexDigit, ord, toLower)
 import Data.Map qualified as Map
 import Interpreter (interpretN)
-import State (State (..), decreaseTimers, render, renderState)
+import State (State (..), decreaseTimers, releaseKeys, render, renderState, tickClock)
 import Terminal.Game
     ( Event (KeyPress, Tick)
     , GEnv
@@ -40,6 +40,11 @@ pattern KeyKeypad c <- KeyPress c
 
 speed :: Int
 speed = 1
+
+-- Empirical proportion between speed and the amount of time a key should stay
+-- pressed so that the code can detect it
+keyTimeout :: Integer
+keyTimeout = 20 + (40 `div` fromIntegral speed)
 
 headerHeight :: Row
 headerHeight = 4
@@ -85,8 +90,9 @@ game s = Game 50 start step displayGame
     step _ (GameState run state count) Tick =
         case interpretN speed state of
             Nothing -> Right $ GameState Pause state count
-            Just state' -> Right $ GameState run' (decreaseTimers state') $ count + speed
+            Just state' -> Right $ GameState run' (tick state') $ count + speed
       where
+        tick = releaseKeys keyTimeout . decreaseTimers . tickClock
         run' = case run of
             Run -> Run
             Step -> Pause
@@ -114,9 +120,7 @@ game s = Game 50 start step displayGame
         KeyReset -> GameState Reset state count
         KeyKeypad n
             | isHexDigit n ->
-                -- NOTE: why use Map.empty? Only one key can be pressed at time to overcome
-                -- the shortcoming of the library which doesn't support KeyRelease event
-                GameState run state{keys = Map.insert (hexDigit n) True Map.empty} count
+                GameState run state{keys = Map.insert (hexDigit n) (clock state) (keys state)} count
         _ -> old
 
 displayGame :: GEnv -> GameState -> Plane
