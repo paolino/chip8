@@ -4,13 +4,13 @@ import Control.Monad ((>=>))
 import Data.ByteString (readFile)
 import Graphics (chip8Application)
 -- import Programs.Dump (dumpPrograms)
-import Rendering (run, testApplication)
+import Rendering (run)
 import State (bootState)
 import Prelude hiding (readFile)
 
 main :: IO ()
 main = do
-    run testApplication
+    -- run testApplication
     -- compile "roms/IBM Logo'.ch8"
     -- dumpPrograms
     -- TODO: add program selection in roms directory

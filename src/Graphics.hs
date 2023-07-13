@@ -61,6 +61,12 @@ renderStateLines GameState{..} =
         <> [ "cycle count:" <> show _count
            , "graphic state:" <> show _paused
            ]
+        <> ["-------"]
+        <> [ "press space to pause/resume"
+           , "press enter to step"
+           , "press q to quit"
+           , "press r to reset"
+           ]
 
 updateState :: GameState -> (GameState, [String])
 updateState old@(GameState Pause _state _) = (old, renderStateLines old)
