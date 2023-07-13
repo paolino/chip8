@@ -3,7 +3,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Rendering 
+module Rendering
     ( run
     , Application (..)
     , TestApplicationState
@@ -11,7 +11,7 @@ module Rendering
     , pattern KeyReleased
     , testApplication
     )
-    where
+where
 
 import Control.Concurrent (forkIO, threadDelay)
 import Control.Concurrent.STM
@@ -142,8 +142,8 @@ testApplication :: Application TestApplicationState
 testApplication =
     Application
         { appDraw = \renderer _ -> do
-            x <- randomRIO (0, 800)
-            y <- randomRIO (0, 600)
+            x <- randomRIO (0, 640)
+            y <- randomRIO (0, 320)
             rendererDrawColor renderer $= V4 0 0 255 255
             drawLine renderer (P (V2 0 0)) (P (V2 x y))
         , appUpdate = \s -> (s, [show s])
@@ -167,9 +167,8 @@ loop console renderer Application{..} = go appInitialState
         case ms' of
             Left l -> console ([l], False)
             Right s' -> do
-            
                 let (s'', ls) = appUpdate s'
-                console (ls <> [show $ length events], True)
+                console (ls, True)
                 appDraw renderer s''
                 present renderer
                 threadDelay appSleep

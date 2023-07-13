@@ -97,11 +97,9 @@ pasteSprite (Coo x y) sprite display = foldl' xor' (False, display) $ do
   where
     xor' :: (Bool, Display) -> (Coo, Bool) -> (Bool, Display)
     xor' (v, d) (coo, p) =
-        let
-            p' = Map.findWithDefault False coo d
+        let p' = Map.findWithDefault False coo d
             p'' = p' `xor` p
-        in
-            -- v' = p' /= p''
+        in  -- v' = p' /= p''
 
             (v || (p && p'), Map.insert coo p'' d)
 

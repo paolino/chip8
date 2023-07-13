@@ -15,7 +15,6 @@ haddock-style: single-line
 in-style: left-align
 indent-wheres: false
 indentation: 4
-let-style: auto
+let-style: inline
 newlines-between-decls: 1
 record-brace-space: false
-respectful: true

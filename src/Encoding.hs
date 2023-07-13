@@ -76,7 +76,6 @@ import Data.Functor (($>))
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Word (Word8)
-import Debug.Trace
 import Offset (memoryOffset)
 import Opcodes (Instruction (..), bytesOpcode, decode, encode, opcodeBytes)
 import Types (Address, Byte (..), Memory, Sprite)
@@ -203,11 +202,10 @@ interpreter (Pure _) encoding =
   where
     solveRoutines :: [(Ref, AssemblyF ())] -> Encoding -> Encoding
     solveRoutines xs e =
-        let
-            pass0 = foldl' g e xs
+        let pass0 = foldl' g e xs
             g :: Encoding -> (Ref, AssemblyF ()) -> Encoding
-            g e' (ref, routine) =
-                interpreter routine
+            g e' (ref, routine') =
+                interpreter routine'
                     $ e'
                         { routineAddresses = Map.insert ref (encodingLastAddress e') $ routineAddresses e'
                         , encodingTargets = Map.delete ref $ encodingTargets e'
@@ -222,11 +220,8 @@ interpreter (Pure _) encoding =
                             storeInstruction targetAddress (solveInstruction address)
                                 $ encodingMemory e''
                         }
-        in
-            pass1
-    (sprites, routines') = spritesAndRoutines encoding
-    routines = traceShow (length routines') routines'
-
+        in  pass1
+    (sprites, routines) = spritesAndRoutines encoding
     solveSprites :: Encoding -> (Ref, Sprite) -> Encoding
     solveSprites encoding' (ref, sprite') =
         foldl' g encoding''
@@ -265,28 +260,24 @@ interpreter (Free (AddRoutine f g)) encoding =
 
 _addReturn :: Encoding -> Encoding
 _addReturn encoding =
-    let
-        address = encodingLastAddress encoding
+    let address = encodingLastAddress encoding
         encoding' =
             encoding
                 { encodingMemory =
                     storeInstruction address Return $ encodingMemory encoding
                 , encodingLastAddress = address + 2
                 }
-    in
-        encoding'
+    in  encoding'
 
 pushRefRourine :: Encoding -> AssemblyF () -> (Ref, Encoding)
-pushRefRourine encoding routine =
-    let
-        ref = encodingLastReference encoding
+pushRefRourine encoding routine' =
+    let ref = encodingLastReference encoding
         encoding' =
             encoding
                 { encodingLastReference = encodingLastReference encoding + 1
-                , encodingTargets = Map.insert ref (Right routine) $ encodingTargets encoding
+                , encodingTargets = Map.insert ref (Right routine') $ encodingTargets encoding
                 }
-    in
-        (ref, encoding')
+    in  (ref, encoding')
 
 -- | Push a reference to a sprite into the encoding. This will leave a hole in the memory
 -- that will be filled with the instruction when the address to complete the instruction
@@ -486,13 +477,3 @@ encodingExample = interpreter example $ encodingBoot 0
 
 exampleProgram :: ByteString
 exampleProgram = offloadMemory $ encodingMemory encodingExample
-
-{- testProgram :: IO ()
-testProgram = playGame . game . bootState $ exampleProgram
-
-testInterpreter :: IO ()
-testInterpreter =
-    pPrint
-        $ interpreter example
-        $ Encoding mempty memoryOffset 0 mempty mempty mempty
- -}
