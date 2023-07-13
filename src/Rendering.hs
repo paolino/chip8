@@ -173,4 +173,4 @@ loop console renderer Application{..} = go appInitialState
                 appDraw renderer s''
                 present renderer
                 threadDelay appSleep
-                go s'
+                go s''

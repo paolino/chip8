@@ -1,4 +1,5 @@
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Graphics where
 
@@ -23,6 +24,7 @@ import State (State (display), renderState)
 import Types (Coo (..))
 
 data Run = Pause | Run | Step | Quit | End | Reset
+    deriving (Eq, Show)
 
 data GameState = GameState {_paused :: Run, _state :: State, _count :: Int}
 
@@ -82,17 +84,22 @@ consumeEvent old@(GameState run state count) c = Right $ case c of
     KeyPressed KeycodeR -> GameState Reset state count
     _ -> old
 
-renderStateLines :: State -> [String]
-renderStateLines = lines . renderState
+renderStateLines :: GameState -> [String]
+renderStateLines GameState{..} = 
+    (lines . renderState $ _state) ++ [show _count, show _paused]
 
-updateState :: GameState -> (GameState, [String])
-updateState (GameState Quit state count) = (GameState Quit state count, renderStateLines state)
-updateState (GameState Reset state count) = (GameState Reset state count, renderStateLines state)
-updateState old@(GameState Pause state _) = (old, renderStateLines state)
-updateState (GameState run state count) =
+updateState :: State -> GameState -> (GameState, [String])
+updateState _ (GameState Quit state count) = let 
+    g = GameState Quit state count in (g, renderStateLines g)
+updateState state0 (GameState Reset state count) = let 
+    g = GameState Pause state0 0 in (g, renderStateLines g)
+updateState _ old@(GameState Pause state _) = (old, renderStateLines old)
+updateState _ (GameState run state count) =
     case interpretN speed state of
-        Nothing -> (GameState Pause state count, renderStateLines state)
-        Just state' -> (GameState run' state' $ count + speed, renderStateLines state)
+        Nothing -> let 
+            g = GameState Pause  state count in (g, renderStateLines g)
+        Just state' -> let 
+            g = GameState run' state' $ count + speed in (g, renderStateLines g)
   where
     run' = case run of
         Run -> Run
@@ -103,7 +110,7 @@ chip8Application :: State -> Application GameState
 chip8Application state =
     Application
         { appDraw = drawGame
-        , appUpdate = updateState
+        , appUpdate = updateState state
         , appHandleEvent = consumeEvent
         , appInitialState = GameState Run state 0
         , appSleep = 20000
