@@ -41,6 +41,7 @@ library
     Programs.IBM
     Programs.Dump
     Programs.Subroutine
+    Rendering
 
   other-modules:    Paths_chip8
   hs-source-dirs:   src
