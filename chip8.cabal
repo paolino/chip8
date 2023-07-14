@@ -91,6 +91,7 @@ executable chip8
     , mtl
     , chip8
     , directory
+    , cmdargs
 
 
   default-language: Haskell2010
