@@ -34,7 +34,6 @@ import Control.Monad.Cont
     )
 import Control.Monad.Fix (fix)
 import Data.Foldable (foldl', traverse_)
-import Data.Function ((&))
 import SDL
     ( Event (..)
     , EventPayload (KeyboardEvent)
