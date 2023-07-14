@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -6,10 +5,8 @@
 module Rendering
     ( run
     , Application (..)
-    , TestApplicationState
     , pattern KeyPressed
     , pattern KeyReleased
-    , testApplication
     )
 where
 
@@ -18,11 +15,8 @@ import Control.Concurrent.Async (withAsync)
 import Control.Concurrent.STM
     ( atomically
     , newEmptyTMVarIO
-    , newTChanIO
     , putTMVar
-    , readTChan
     , takeTMVar
-    , writeTChan
     )
 import Control.Monad.Cont
     ( ContT (ContT, runContT)
@@ -34,6 +28,8 @@ import Control.Monad.Cont
     )
 import Control.Monad.Fix (fix)
 import Data.Foldable (foldl', traverse_)
+import Data.Text qualified as T
+import Foreign.C (CInt)
 import SDL
     ( Event (..)
     , EventPayload (KeyboardEvent)
@@ -42,41 +38,30 @@ import SDL
     , Keycode
     , Keysym (..)
     , Point (..)
+    , Rectangle (..)
     , Renderer
-    , RendererConfig (..)
-    , RendererType (..)
+    , Surface
     , V2 (..)
     , V4 (V4)
+    , Window
     , WindowConfig (..)
     , WindowGraphicsContext (..)
     , WindowMode (..)
     , WindowPosition (..)
-    , createRenderer
+    , clear
+    , createSoftwareRenderer
     , createWindow
     , destroyWindow
-    , drawLine
+    , fillRect
+    , getWindowSurface
     , initializeAll
     , pollEvents
-    , present
     , rendererDrawColor
+    , surfaceBlit
+    , updateWindowSurface
     , ($=)
-    , pattern KeycodeQ
     )
-import System.Console.ANSI (clearLine, cursorUp)
-import System.Random (randomRIO)
-
-logger :: IO (IO (), ([String], Bool) -> IO ())
-logger = do
-    console <- newTChanIO
-    let go n = do
-            (ls, keepup) <- atomically $ readTChan console
-            clearLine
-            forM_ [0 .. n] $ \_ -> do
-                cursorUp 1
-                clearLine
-            traverse_ putStrLn ls
-            when keepup $ go (length ls)
-    pure (go 0, atomically . writeTChan console)
+import SDL.Font (Color, Font, initialize, load, shaded)
 
 timer :: IO (IO (), IO ())
 timer = do
@@ -86,8 +71,8 @@ timer = do
             atomically $ putTMVar block ()
     pure (a, atomically $ takeTMVar block)
 
-wc :: WindowConfig
-wc =
+wc :: CInt -> CInt -> WindowConfig
+wc width height =
     WindowConfig
         { windowBorder = True
         , windowHighDPI = False
@@ -96,15 +81,8 @@ wc =
         , windowGraphicsContext = NoGraphicsContext
         , windowPosition = Wherever
         , windowResizable = False
-        , windowInitialSize = V2 640 320
+        , windowInitialSize = V2 width height
         , windowVisible = True
-        }
-
-wr :: RendererConfig
-wr =
-    RendererConfig
-        { rendererType = AcceleratedRenderer
-        , rendererTargetTexture = False
         }
 
 withThreads :: [IO ()] -> IO () -> IO ()
@@ -115,29 +93,35 @@ withThreads threads action =
 
 run :: Application s -> IO ()
 run application = do
-    (runConsole, console) <- logger
     (runTimer, wait) <- timer
-    withThreads [runConsole, runTimer] $ do
+    withThreads [runTimer] $ do
         initializeAll
-        window <- createWindow "Chip8 interpreter" wc
-        renderer <- createRenderer window (-1) wr
-        loop wait console renderer application
+        initialize
+        window <- createWindow "Chip8 interpreter" $ wc 640 800
+        font <- load "fonts/ShareTechMono-Regular.ttf" 24
+        loop wait window font application
         destroyWindow window
 
+black :: Color
+black = V4 0 0 0 255
+
+blue :: Color
+blue = V4 128 128 255 255
+
+darkBlue :: Color
+darkBlue = V4 64 64 128 255
+
+darkGray :: Color
+darkGray = V4 64 64 64 255
+
+-- updateWindowSurface interaction
+
 data Application s = Application
-    { appDraw :: Renderer -> s -> IO ()
+    { appDraw :: s -> [[Bool]]
     , appHandleEvent :: s -> Event -> Either String s
     , appUpdate :: s -> (s, [String])
     , appInitialState :: s
-    , appSleep :: Int
     }
-
-data TestApplicationState = State
-    { stateKey :: Maybe Keycode
-    , stateUnit :: ()
-    }
-    deriving (Show)
-
 pattern KeyPressed :: Keycode -> Event
 pattern KeyPressed x <-
     Event
@@ -166,41 +150,59 @@ pattern KeyReleased x <-
                     }
             )
 
-testApplication :: Application TestApplicationState
-testApplication =
-    Application
-        { appDraw = \renderer _ -> do
-            x <- randomRIO (0, 640)
-            y <- randomRIO (0, 320)
-            rendererDrawColor renderer $= V4 0 0 255 255
-            drawLine renderer (P (V2 0 0)) (P (V2 x y))
-        , appUpdate = \s -> (s, [show s])
-        , appHandleEvent =
-            \s -> \case
-                KeyPressed KeycodeQ -> Left "Bye!"
-                KeyPressed x -> Right s{stateKey = Just x}
-                KeyReleased _x -> Right s{stateKey = Nothing}
-                _ -> Right s
-        , appInitialState = State Nothing ()
-        , appSleep = 20000
-        }
+drawConsole :: Surface -> Font -> [String] -> IO ()
+drawConsole surface font ls = forM_ (zip [0 ..] ls) $ \(j, l) -> do
+    txt <- shaded font darkBlue black $ T.pack l
+    void $ surfaceBlit txt Nothing surface $ Just $ P $ V2 0 (344 + 24 * j)
+
+clearWindow :: Renderer -> IO ()
+clearWindow renderer = do
+    rendererDrawColor renderer $= black
+    clear renderer
+
+drawGame :: Renderer -> [[Bool]] -> IO ()
+drawGame renderer board = do
+    rendererDrawColor renderer $= blue
+    sequence_ $ do
+        y <- [0 .. 31]
+        x <- [0 .. 63]
+        pure
+            $ when
+                (board !! y !! x)
+            $ fillRect renderer
+            $ Just
+            $ Rectangle
+                (P $ V2 (fromIntegral x * 10) (fromIntegral y * 10))
+                (V2 10 10)
+
+drawGrid :: Renderer -> IO ()
+drawGrid renderer = do
+    rendererDrawColor renderer $= darkGray
+    forM_ [0 .. 16] $ \x -> do
+        fillRect renderer $ Just $ Rectangle (P $ V2 (x * 80) 0) (V2 1 320)
+    forM_ [0 .. 4] $ \y -> do
+        fillRect renderer $ Just $ Rectangle (P $ V2 0 (y * 80)) (V2 640 1)
 
 loop
     :: IO ()
-    -> (([String], Bool) -> IO ())
-    -> Renderer
+    -> Window
+    -> Font
     -> Application s
     -> IO ()
-loop wait console renderer Application{..} =
+loop wait window font Application{..} = do
+    surface <- getWindowSurface window
+    renderer <- createSoftwareRenderer surface
     ($ appInitialState) $ fix $ \go s -> do
         events <- pollEvents
         let f ms e = ms >>= \s'' -> appHandleEvent s'' e
         case foldl' f (Right s) events of
-            Left l -> console ([l], False)
+            Left l -> putStrLn l
             Right s' -> do
                 let (s'', ls) = appUpdate s'
-                console (ls, True)
-                appDraw renderer s''
-                present renderer
+                clearWindow renderer
+                drawGrid renderer
+                drawGame renderer $ appDraw s''
+                drawConsole surface font ls
+                updateWindowSurface window
                 wait
                 go s''
