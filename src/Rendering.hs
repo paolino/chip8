@@ -24,8 +24,15 @@ import Control.Concurrent.STM
     , takeTMVar
     , writeTChan
     )
-import Control.Monad (forever, when)
-import Data.Foldable (foldl', forM_, traverse_)
+import Control.Monad.Cont
+    ( ContT (ContT, runContT)
+    , MonadTrans (lift)
+    , forM_
+    , forever
+    , void
+    , when
+    )
+import Data.Foldable (foldl', traverse_)
 import SDL
     ( Event (..)
     , EventPayload (KeyboardEvent)
@@ -62,6 +69,7 @@ logger = do
     console <- newTChanIO
     let go n = do
             (ls, keepup) <- atomically $ readTChan console
+            clearLine
             forM_ [0 .. n] $ \_ -> do
                 cursorUp 1
                 clearLine
@@ -98,17 +106,22 @@ wr =
         , rendererTargetTexture = False
         }
 
+withThreads :: [IO ()] -> IO () -> IO ()
+withThreads threads action =
+    flip runContT pure $ do
+        traverse_ (void . ContT . withAsync) threads
+        lift action
+
 run :: Application s -> IO ()
 run application = do
     (runConsole, console) <- logger
     (runTimer, wait) <- timer
-    withAsync runConsole $ \_ -> do
-        withAsync runTimer $ \_ -> do
-            initializeAll
-            window <- createWindow "Chip8 interpreter" wc
-            renderer <- createRenderer window (-1) wr
-            loop wait console renderer application
-            destroyWindow window
+    withThreads [runConsole, runTimer] $ do
+        initializeAll
+        window <- createWindow "Chip8 interpreter" wc
+        renderer <- createRenderer window (-1) wr
+        loop wait console renderer application
+        destroyWindow window
 
 data Application s = Application
     { appDraw :: Renderer -> s -> IO ()

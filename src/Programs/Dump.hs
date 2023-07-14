@@ -21,5 +21,5 @@ encode program =
 
 dumpPrograms :: IO ()
 dumpPrograms = do
-    -- writeFile "roms/IBM Logo'.ch8" $ encode IBM.program
+    writeFile "roms/IBM Logo'.ch8" $ encode IBM.program
     writeFile "roms/Subroutine.ch8" $ encode Subroutine.program
