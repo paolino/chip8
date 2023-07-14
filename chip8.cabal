@@ -63,6 +63,7 @@ library
     , stm
     , ansi-terminal
     , random
+    , async
 
 
   default-language: Haskell2010

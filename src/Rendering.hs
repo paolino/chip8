@@ -13,15 +13,18 @@ module Rendering
     )
 where
 
-import Control.Concurrent (forkIO, threadDelay)
+import Control.Concurrent (threadDelay)
+import Control.Concurrent.Async (withAsync)
 import Control.Concurrent.STM
-    ( TChan
-    , atomically
+    ( atomically
+    , newEmptyTMVarIO
     , newTChanIO
+    , putTMVar
     , readTChan
+    , takeTMVar
     , writeTChan
     )
-import Control.Monad (when)
+import Control.Monad (forever, when)
 import Data.Foldable (foldl', forM_, traverse_)
 import SDL
     ( Event (..)
@@ -54,16 +57,25 @@ import SDL
 import System.Console.ANSI (clearLine, cursorUp)
 import System.Random (randomRIO)
 
-logger :: (Foldable t) => TChan (t String, Bool) -> IO ()
-logger console = go 0
-  where
-    go n = do
-        (ls, keepup) <- atomically $ readTChan console
-        forM_ [0 .. n] $ \_ -> do
-            cursorUp 1
-            clearLine
-        traverse_ putStrLn ls
-        when keepup $ go (length ls)
+logger :: IO (IO (), ([String], Bool) -> IO ())
+logger = do
+    console <- newTChanIO
+    let go n = do
+            (ls, keepup) <- atomically $ readTChan console
+            forM_ [0 .. n] $ \_ -> do
+                cursorUp 1
+                clearLine
+            traverse_ putStrLn ls
+            when keepup $ go (length ls)
+    pure (go 0, atomically . writeTChan console)
+
+timer :: IO (IO (), IO ())
+timer = do
+    block <- newEmptyTMVarIO
+    let a = forever $ do
+            threadDelay $ 1000000 `div` 60
+            atomically $ putTMVar block ()
+    pure (a, atomically $ takeTMVar block)
 
 wc :: WindowConfig
 wc =
@@ -82,19 +94,21 @@ wc =
 wr :: RendererConfig
 wr =
     RendererConfig
-        { rendererType = UnacceleratedRenderer
+        { rendererType = AcceleratedRenderer
         , rendererTargetTexture = False
         }
 
 run :: Application s -> IO ()
 run application = do
-    console <- newTChanIO
-    _ <- forkIO $ logger console
-    initializeAll
-    window <- createWindow "Chip8 interpreter" wc
-    renderer <- createRenderer window (-1) wr
-    loop (atomically . writeTChan console) renderer application
-    destroyWindow window
+    (runConsole, console) <- logger
+    (runTimer, wait) <- timer
+    withAsync runConsole $ \_ -> do
+        withAsync runTimer $ \_ -> do
+            initializeAll
+            window <- createWindow "Chip8 interpreter" wc
+            renderer <- createRenderer window (-1) wr
+            loop wait console renderer application
+            destroyWindow window
 
 data Application s = Application
     { appDraw :: Renderer -> s -> IO ()
@@ -157,8 +171,13 @@ testApplication =
         , appSleep = 20000
         }
 
-loop :: (([String], Bool) -> IO ()) -> Renderer -> Application s -> IO ()
-loop console renderer Application{..} = go appInitialState
+loop
+    :: IO ()
+    -> (([String], Bool) -> IO ())
+    -> Renderer
+    -> Application s
+    -> IO ()
+loop wait console renderer Application{..} = go appInitialState
   where
     go s = do
         events <- pollEvents
@@ -171,5 +190,5 @@ loop console renderer Application{..} = go appInitialState
                 console (ls, True)
                 appDraw renderer s''
                 present renderer
-                threadDelay appSleep
+                wait
                 go s''

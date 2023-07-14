@@ -9,6 +9,7 @@ import Interpreter (interpretN)
 import Rendering (Application (..), pattern KeyPressed)
 import SDL
     ( Event (..)
+    , EventPayload (..)
     , Point (..)
     , Rectangle (..)
     , Renderer
@@ -21,7 +22,7 @@ import SDL
     , pattern KeycodeQ
     , pattern KeycodeR
     , pattern KeycodeReturn
-    , pattern KeycodeSpace, EventPayload (..)
+    , pattern KeycodeSpace
     )
 import State (State (display), renderState)
 import Types (Coo (..))
