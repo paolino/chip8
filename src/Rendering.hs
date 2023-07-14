@@ -32,7 +32,9 @@ import Control.Monad.Cont
     , void
     , when
     )
+import Control.Monad.Fix (fix)
 import Data.Foldable (foldl', traverse_)
+import Data.Function ((&))
 import SDL
     ( Event (..)
     , EventPayload (KeyboardEvent)
@@ -190,13 +192,11 @@ loop
     -> Renderer
     -> Application s
     -> IO ()
-loop wait console renderer Application{..} = go appInitialState
-  where
-    go s = do
+loop wait console renderer Application{..} =
+    ($ appInitialState) $ fix $ \go s -> do
         events <- pollEvents
-        let ms' = foldl' f (Right s) events
-            f ms e = ms >>= \s'' -> appHandleEvent s'' e
-        case ms' of
+        let f ms e = ms >>= \s'' -> appHandleEvent s'' e
+        case foldl' f (Right s) events of
             Left l -> console ([l], False)
             Right s' -> do
                 let (s'', ls) = appUpdate s'
