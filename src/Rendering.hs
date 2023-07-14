@@ -110,6 +110,7 @@ data GraphicsParams = GraphicsParams
     { gpPixelSize :: CInt
     , gpSmallFontSize :: CInt
     , gpBigFontSize :: CInt
+    , gpFontFile :: FilePath
     }
 
 wc :: GraphicsParams -> WindowConfig
@@ -131,9 +132,9 @@ run gp@GraphicsParams{..} application = do
     (runTimer, wait) <- timer
     initializeAll
     initialize
-    window <- createWindow "Chip8 interpreter" $ wc gp
-    fontSmall <- load "fonts/ShareTechMono-Regular.ttf" $ fromIntegral gpSmallFontSize
-    fontBig <- load "fonts/ShareTechMono-Regular.ttf" $ fromIntegral gpBigFontSize
+    window <- createWindow "Chip8 Interpreter" $ wc gp
+    fontSmall <- load gpFontFile $ fromIntegral gpSmallFontSize
+    fontBig <- load gpFontFile $ fromIntegral gpBigFontSize
     withThreads [runTimer] $ do
         loop gp wait window fontSmall fontBig application
     destroyWindow window
