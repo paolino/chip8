@@ -94,13 +94,13 @@ withThreads threads action =
 run :: Application s -> IO ()
 run application = do
     (runTimer, wait) <- timer
+    initializeAll
+    initialize
+    window <- createWindow "Chip8 interpreter" $ wc 640 820
+    font <- load "fonts/ShareTechMono-Regular.ttf" 24
     withThreads [runTimer] $ do
-        initializeAll
-        initialize
-        window <- createWindow "Chip8 interpreter" $ wc 640 800
-        font <- load "fonts/ShareTechMono-Regular.ttf" 24
         loop wait window font application
-        destroyWindow window
+    destroyWindow window
 
 black :: Color
 black = V4 0 0 0 255
@@ -117,11 +117,12 @@ darkGray = V4 64 64 64 255
 -- updateWindowSurface interaction
 
 data Application s = Application
-    { appDraw :: s -> [[Bool]]
+    { appDraw :: s -> (String, [[Bool]])
     , appHandleEvent :: s -> Event -> Either String s
     , appUpdate :: s -> (s, [String])
     , appInitialState :: s
     }
+
 pattern KeyPressed :: Keycode -> Event
 pattern KeyPressed x <-
     Event
@@ -153,16 +154,33 @@ pattern KeyReleased x <-
 drawConsole :: Surface -> Font -> [String] -> IO ()
 drawConsole surface font ls = forM_ (zip [0 ..] ls) $ \(j, l) -> do
     txt <- shaded font darkBlue black $ T.pack l
-    void $ surfaceBlit txt Nothing surface $ Just $ P $ V2 0 (344 + 24 * j)
+    void $ surfaceBlit txt Nothing surface $ Just $ P $ V2 0 (gameY $ 24 * j)
 
 clearWindow :: Renderer -> IO ()
 clearWindow renderer = do
     rendererDrawColor renderer $= black
     clear renderer
 
-drawGame :: Renderer -> [[Bool]] -> IO ()
-drawGame renderer board = do
+nameH :: CInt
+nameH = 32
+
+boardY :: CInt -> CInt
+boardY = (nameH +)
+
+gameH :: CInt
+gameH = 320
+
+consoleHH :: CInt
+consoleHH = 24
+
+gameY :: CInt -> CInt
+gameY = (consoleHH +) . (gameH +) . boardY
+
+drawGame :: Renderer -> Surface -> Font -> (String, [[Bool]]) -> IO ()
+drawGame renderer surface font (name, board) = do
     rendererDrawColor renderer $= blue
+    txt <- shaded font darkBlue black $ T.pack name
+    void $ surfaceBlit txt Nothing surface $ Just $ P $ V2 0 0
     sequence_ $ do
         y <- [0 .. 31]
         x <- [0 .. 63]
@@ -172,16 +190,16 @@ drawGame renderer board = do
             $ fillRect renderer
             $ Just
             $ Rectangle
-                (P $ V2 (fromIntegral x * 10) (fromIntegral y * 10))
+                (P $ V2 (fromIntegral x * 10) (boardY $ fromIntegral y * 10))
                 (V2 10 10)
 
 drawGrid :: Renderer -> IO ()
 drawGrid renderer = do
     rendererDrawColor renderer $= darkGray
     forM_ [0 .. 16] $ \x -> do
-        fillRect renderer $ Just $ Rectangle (P $ V2 (x * 80) 0) (V2 1 320)
+        fillRect renderer $ Just $ Rectangle (P $ V2 (x * 80) (boardY 0)) (V2 1 320)
     forM_ [0 .. 4] $ \y -> do
-        fillRect renderer $ Just $ Rectangle (P $ V2 0 (y * 80)) (V2 640 1)
+        fillRect renderer $ Just $ Rectangle (P $ V2 0 (boardY $ y * 80)) (V2 640 1)
 
 loop
     :: IO ()
@@ -201,7 +219,7 @@ loop wait window font Application{..} = do
                 let (s'', ls) = appUpdate s'
                 clearWindow renderer
                 drawGrid renderer
-                drawGame renderer $ appDraw s''
+                drawGame renderer surface font $ appDraw s''
                 drawConsole surface font ls
                 updateWindowSurface window
                 wait

@@ -90,6 +90,7 @@ executable chip8
     , pretty-simple
     , mtl
     , chip8
+    , directory
 
 
   default-language: Haskell2010
