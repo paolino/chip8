@@ -121,6 +121,14 @@ configParser =
                 <> value (JColor $ V4 128 128 128 255)
                 <> help "Grid color in hex format"
             )
+        <*> option
+            auto
+            ( long "speed"
+                <> metavar "SPEED"
+                <> showDefault
+                <> value 10
+                <> help "Instructions per frame"
+            )
 hex :: Word8 -> Char
 hex x
     | x < 10 = toEnum $ fromEnum '0' + fromEnum x
@@ -150,5 +158,6 @@ data Config = Config
     , gameColor :: JColor
     , textColor :: JColor
     , gridColor :: JColor
+    , speed :: Int
     }
     deriving (Show)

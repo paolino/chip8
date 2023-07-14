@@ -29,7 +29,7 @@ main = do
             do colorJ gameColor
             do colorJ textColor
             do colorJ gridColor
-    run gp $ chip8Application games 0
+    run gp $ chip8Application speed games 0
 
 runFile :: FilePath -> IO State
 runFile = fmap bootState . readFile

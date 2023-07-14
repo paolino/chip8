@@ -30,9 +30,6 @@ data GameState = GameState
     , _selection :: Int
     }
 
-speed :: Int
-speed = 10
-
 consumeEvent :: [(String, State)] -> GameState -> Event -> Either String GameState
 consumeEvent games old@(GameState run state count _selection ) c = case c of
     KeyPressed KeycodeN ->
@@ -78,9 +75,9 @@ renderStateLines GameState{..} =
            , "press p to run the previous game"
            ]
 
-updateState :: GameState -> (GameState, [String])
-updateState old@(GameState Pause _state _ _) = (old, renderStateLines old)
-updateState (GameState run state count state0) =
+updateState :: Int -> GameState -> (GameState, [String])
+updateState _ old@(GameState Pause _state _ _) = (old, renderStateLines old)
+updateState speed (GameState run state count state0) =
     case interpretN speed' state of
         Nothing ->
             let g = GameState Pause state count state0
@@ -98,11 +95,11 @@ updateState (GameState run state count state0) =
         Step -> Pause
         End -> End
 
-chip8Application :: [(String, State)] -> Int -> Application GameState
-chip8Application games selection =
+chip8Application :: Int -> [(String, State)] -> Int -> Application GameState
+chip8Application speed games selection =
     Application
         { appDraw = \s -> (fst $ games !! _selection s,) . extract . display $ _state s
-        , appUpdate = updateState
+        , appUpdate = updateState speed
         , appHandleEvent = consumeEvent games
         , appInitialState = GameState Run (snd $ games !! selection) 0 selection
         }
