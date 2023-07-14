@@ -44,7 +44,6 @@ import SDL
     , Renderer
     , Surface
     , V2 (..)
-    , V4 (V4)
     , Window
     , WindowConfig (..)
     , WindowGraphicsContext (..)
@@ -111,6 +110,10 @@ data GraphicsParams = GraphicsParams
     , gpSmallFontSize :: CInt
     , gpBigFontSize :: CInt
     , gpFontFile :: FilePath
+    , gpBackgroundColor :: Color
+    , gpGameColor :: Color
+    , gpTextColor :: Color
+    , gpGridColor :: Color
     }
 
 wc :: GraphicsParams -> WindowConfig
@@ -177,18 +180,6 @@ pattern KeyReleased x <-
                     }
             )
 
-black :: Color
-black = V4 0 0 0 255
-
-blue :: Color
-blue = V4 128 128 255 255
-
-darkBlue :: Color
-darkBlue = V4 64 64 128 255
-
-darkGray :: Color
-darkGray = V4 64 64 64 255
-
 data Rendering = Rendering
     { rcSurface :: Surface
     , rcSmallFont :: Font
@@ -199,22 +190,22 @@ data Rendering = Rendering
 drawConsole :: GraphicsParams -> Rendering -> [String] -> IO ()
 drawConsole gp@GraphicsParams{..} Rendering{..} ls =
     forM_ (zip [0 ..] ls) $ \(j, l) -> do
-        txt <- shaded rcSmallFont darkBlue black $ T.pack l
+        txt <- shaded rcSmallFont gpGridColor gpBackgroundColor $ T.pack l
         void
             $ surfaceBlit txt Nothing rcSurface
             $ Just
             $ P
             $ V2 0 (gameY gp $ gpSmallFontSize * j)
 
-clearWindow :: Rendering -> IO ()
-clearWindow Rendering{rcRenderer} = do
-    rendererDrawColor rcRenderer $= black
+clearWindow :: GraphicsParams -> Rendering -> IO ()
+clearWindow GraphicsParams{..} Rendering{rcRenderer} = do
+    rendererDrawColor rcRenderer $= gpBackgroundColor
     clear rcRenderer
 
 drawGame :: GraphicsParams -> Rendering -> (String, [[Bool]]) -> IO ()
 drawGame gp@GraphicsParams{..} Rendering{..} (name, board) = do
-    rendererDrawColor rcRenderer $= blue
-    txt <- shaded rcBigFont darkBlue black $ T.pack name
+    rendererDrawColor rcRenderer $= gpGameColor
+    txt <- shaded rcBigFont gpTextColor gpBackgroundColor $ T.pack name
     (sz, _) <- size rcBigFont $ T.pack name
     void
         $ surfaceBlit txt Nothing rcSurface
@@ -238,7 +229,7 @@ drawGame gp@GraphicsParams{..} Rendering{..} (name, board) = do
 
 drawGrid :: GraphicsParams -> Rendering -> IO ()
 drawGrid gp@GraphicsParams{..} Rendering{..} = do
-    rendererDrawColor rcRenderer $= darkGray
+    rendererDrawColor rcRenderer $= gpGridColor
     forM_ [0 .. 16] $ \x -> do
         fillRect rcRenderer
             $ Just
@@ -267,7 +258,7 @@ loop gp wait window fontSmall fontBig Application{..} = do
             Left l -> putStrLn l
             Right s' -> do
                 let (s'', ls) = appUpdate s'
-                clearWindow rendering
+                clearWindow gp rendering
                 drawGrid gp rendering
                 drawGame gp rendering $ appDraw s''
                 drawConsole gp rendering ls
