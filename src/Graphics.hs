@@ -31,10 +31,10 @@ data GameState = GameState
     }
 
 speed :: Int
-speed = 1
+speed = 10
 
 consumeEvent :: [(String, State)] -> GameState -> Event -> Either String GameState
-consumeEvent games old@(GameState run state count _selection) c = case c of
+consumeEvent games old@(GameState run state count _selection ) c = case c of
     KeyPressed KeycodeN ->
         let selection' = (_selection + 1) `mod` length games
             state' = snd $ games !! selection'
@@ -81,7 +81,7 @@ renderStateLines GameState{..} =
 updateState :: GameState -> (GameState, [String])
 updateState old@(GameState Pause _state _ _) = (old, renderStateLines old)
 updateState (GameState run state count state0) =
-    case interpretN speed state of
+    case interpretN speed' state of
         Nothing ->
             let g = GameState Pause state count state0
             in  (g, renderStateLines g)
@@ -89,6 +89,10 @@ updateState (GameState run state count state0) =
             let g = GameState run' state' (count + speed) state0
             in  (g, renderStateLines g)
   where
+    speed' = case run of
+        Run -> speed
+        Step -> 1
+        End -> 0
     run' = case run of
         Run -> Run
         Step -> Pause
