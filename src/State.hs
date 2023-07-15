@@ -14,7 +14,7 @@ module State
     , readR
     , readM
     , readK
-    , keyPressed
+    , setKeyState
     ) where
 
 import Data.Bits (Bits (..))
@@ -32,6 +32,7 @@ import Types
     , Coo (..)
     , Display
     , Height
+    , KeyState (..)
     , Keys
     , Memory
     , Nibble
@@ -93,16 +94,11 @@ bootState program =
 readR :: Nibble -> Registers -> Byte
 readR = Map.findWithDefault 0
 
-readK :: Nibble -> Keys -> Bool
-readK = Map.findWithDefault False
+readK :: Nibble -> Keys -> KeyState
+readK = Map.findWithDefault Released
 
 readM :: Address -> Memory -> Byte
 readM = Map.findWithDefault 0
-
-keyPressed :: Keys -> Maybe Nibble
-keyPressed ks = case Map.keys ks of
-    [k] -> Just k
-    _ -> Nothing
 
 decreaseTimers :: State -> State
 decreaseTimers State{..} =
@@ -144,3 +140,6 @@ render State{..} = concat $ do
     pure $ (<> "\n") $ do
         x <- [0 .. 63]
         pure $ if Map.findWithDefault False (Coo x y) display then '█' else ' '
+
+setKeyState :: Nibble -> KeyState -> State -> State
+setKeyState n k s = s{keys = Map.insert n k $ keys s}

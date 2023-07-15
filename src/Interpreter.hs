@@ -6,14 +6,13 @@
 module Interpreter (interpret, interpretN) where
 
 import Data.Bits (Bits (shiftL, shiftR, xor, (.&.)), (.|.))
-import Data.Foldable (foldl')
+import Data.Foldable (find, foldl')
 import Data.List (unfoldr)
 import Data.Map qualified as Map
 import Data.Tuple (swap)
 import Opcodes (Instruction (..), decode)
 import State
     ( State (..)
-    , keyPressed
     , pasteSprite
     , readK
     , readM
@@ -21,7 +20,7 @@ import State
     , readSprite
     , retrieveInstruction
     )
-import Types (Byte, Coo (..), pattern VF)
+import Types (Byte, Coo (..), KeyState (..), pattern VF)
 import Prelude hiding (readFile)
 
 -- | Interpret a single instruction, returning the new state of the CPU, or
@@ -105,22 +104,19 @@ step (SetDelayTimer x) State{..} =
 step (LoadDelayTimer x) State{..} =
     Just $ State{registers = Map.insert x delayTimer registers, ..}
 step (SkipIfKeyPressed x) State{..} =
-    -- NOTE: reset the current key flag, assume only one key is active at time
-    -- TODO: make a proper conversion between Byte out of registry and Nibble
     Just
-        $ if readK (fromIntegral $ readR x registers) keys
-            then State{programCounter = programCounter + 2, keys = Map.empty, ..}
-            else State{..}
+        $ case readK (fromIntegral $ readR x registers) keys of
+            Pressed -> State{programCounter = programCounter + 2, ..}
+            _ -> State{..}
 step (SkipIfNotKeyPressed x) State{..} =
-    -- TODO: make a proper conversion between Byte out of registry and Nibble
-    Just
-        $ if readK (fromIntegral $ readR x registers) keys
-            then State{keys = Map.empty, ..}
-            else State{programCounter = programCounter + 2, ..}
+    Just $ case readK (fromIntegral $ readR x registers) keys of
+        Released -> State{programCounter = programCounter + 2, ..}
+        _ -> State{..}
 step (WaitForKey x) State{..} =
-    Just $ case keyPressed keys of
+    Just $ case find ((==) Pressed . snd) $ Map.assocs keys of
         Nothing -> State{programCounter = programCounter - 2, ..}
-        Just k -> State{registers = Map.insert x (fromIntegral k) registers, ..}
+        Just (k, _) ->
+            State{registers = Map.insert x (fromIntegral k) registers, ..}
 step (SetIndexRegister nnn) State{..} =
     Just $ State{indexRegister = nnn, ..}
 step (Display x y n) cpu@State{..} =

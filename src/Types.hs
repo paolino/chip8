@@ -8,6 +8,7 @@ module Types
     , Display
     , Keys
     , Sprite
+    , KeyState (..)
     , Height (..)
     , Nibble (..)
     , Address (..)
@@ -42,7 +43,10 @@ newtype Byte = Byte Word8
 
 type Memory = Map Address Byte
 
-type Keys = Map Nibble Bool
+data KeyState = Pressed | Released
+    deriving (Eq, Show)
+
+type Keys = Map Nibble KeyState
 
 type Registers = Map Nibble Byte
 

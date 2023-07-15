@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
@@ -5,11 +6,28 @@
 module Graphics (chip8Application) where
 
 import Data.Map (findWithDefault)
+import Data.Map qualified as Map
 import Interpreter (interpretN)
-import Rendering (Application (..), pattern KeyPressed)
+import Rendering (Application (..), pattern KeyPressed, pattern KeyReleased)
 import SDL
     ( Event (..)
     , EventPayload (..)
+    , pattern Keycode0
+    , pattern Keycode1
+    , pattern Keycode2
+    , pattern Keycode3
+    , pattern Keycode4
+    , pattern Keycode5
+    , pattern Keycode6
+    , pattern Keycode7
+    , pattern Keycode8
+    , pattern Keycode9
+    , pattern KeycodeA
+    , pattern KeycodeB
+    , pattern KeycodeC
+    , pattern KeycodeD
+    , pattern KeycodeE
+    , pattern KeycodeF
     , pattern KeycodeN
     , pattern KeycodeP
     , pattern KeycodeQ
@@ -17,8 +35,8 @@ import SDL
     , pattern KeycodeReturn
     , pattern KeycodeSpace
     )
-import State (State (display), renderState)
-import Types (Coo (..), Display)
+import State (State (display, keys), renderState)
+import Types (Coo (..), Display, KeyState (..), Nibble)
 
 data Run = Pause | Run | Step | End
     deriving (Eq, Show)
@@ -30,8 +48,48 @@ data GameState = GameState
     , _selection :: Int
     }
 
+keypad :: Event -> Maybe (Nibble, KeyState)
+keypad = \case
+    KeyPressed n -> case n of
+        Keycode1 -> Just (0x1, Pressed)
+        Keycode2 -> Just (0x2, Pressed)
+        Keycode3 -> Just (0x3, Pressed)
+        Keycode4 -> Just (0x4, Pressed)
+        Keycode5 -> Just (0x5, Pressed)
+        Keycode6 -> Just (0x6, Pressed)
+        Keycode7 -> Just (0x7, Pressed)
+        Keycode8 -> Just (0x8, Pressed)
+        Keycode9 -> Just (0x9, Pressed)
+        Keycode0 -> Just (0x0, Pressed)
+        KeycodeA -> Just (0xA, Pressed)
+        KeycodeB -> Just (0xB, Pressed)
+        KeycodeC -> Just (0xC, Pressed)
+        KeycodeD -> Just (0xD, Pressed)
+        KeycodeE -> Just (0xE, Pressed)
+        KeycodeF -> Just (0xF, Pressed)
+        _ -> Nothing
+    KeyReleased n -> case n of
+        Keycode1 -> Just (0x1, Released)
+        Keycode2 -> Just (0x2, Released)
+        Keycode3 -> Just (0x3, Released)
+        Keycode4 -> Just (0x4, Released)
+        Keycode5 -> Just (0x5, Released)
+        Keycode6 -> Just (0x6, Released)
+        Keycode7 -> Just (0x7, Released)
+        Keycode8 -> Just (0x8, Released)
+        Keycode9 -> Just (0x9, Released)
+        Keycode0 -> Just (0x0, Released)
+        KeycodeA -> Just (0xA, Released)
+        KeycodeB -> Just (0xB, Released)
+        KeycodeC -> Just (0xC, Released)
+        KeycodeD -> Just (0xD, Released)
+        KeycodeE -> Just (0xE, Released)
+        KeycodeF -> Just (0xF, Released)
+        _ -> Nothing
+    _ -> Nothing
+
 consumeEvent :: [(String, State)] -> GameState -> Event -> Either String GameState
-consumeEvent games old@(GameState run state count _selection ) c = case c of
+consumeEvent games old@(GameState run state count _selection) c = case c of
     KeyPressed KeycodeN ->
         let selection' = (_selection + 1) `mod` length games
             state' = snd $ games !! selection'
@@ -57,8 +115,14 @@ consumeEvent games old@(GameState run state count _selection ) c = case c of
     KeyPressed KeycodeQ -> Left "Quit"
     KeyPressed KeycodeR -> Right $ GameState run (snd $ games !! _selection) 0 _selection
     Event _ (WindowClosedEvent _) -> Left "Quit"
-    _ -> Right old
-
+    x -> case keypad x of
+        Nothing -> Right old
+        Just (n, Pressed) ->
+            Right
+                $ old{_state = state{keys = Map.insert n Pressed $ keys state}}
+        Just (n, Released) ->
+            Right
+                $ old{_state = state{keys = Map.insert n Released $ keys state}}
 renderStateLines :: GameState -> [String]
 renderStateLines GameState{..} =
     (lines . renderState $ _state)
