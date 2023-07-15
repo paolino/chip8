@@ -13,6 +13,7 @@ import Data.Tuple (swap)
 import Opcodes (Instruction (..), decode)
 import State
     ( State (..)
+    , decreaseTimers
     , pasteSprite
     , readK
     , readM
@@ -29,7 +30,8 @@ interpret :: State -> Maybe State
 interpret State{..} =
     step
         (decode $ retrieveInstruction programCounter memory)
-        State{programCounter = programCounter + 2, ..}
+        $ decreaseTimers
+        $ State{programCounter = programCounter + 2, ..}
 
 step :: Instruction -> State -> Maybe State
 step ClearScreen State{..} =
