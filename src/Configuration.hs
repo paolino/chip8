@@ -55,7 +55,7 @@ configParser =
             ( long "roms-dir"
                 <> metavar "ROMS_DIR"
                 <> showDefault
-                <> value "roms"
+                <> value "roms/test"
                 <> help "Path to ROMs directory"
             )
         <*> strOption
