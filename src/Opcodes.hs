@@ -20,6 +20,7 @@ import Types (Address, Byte (..), Height, Nibble, Opcode)
 data Instruction
     = ClearScreen
     | Jump Address
+    | JumpV0 Address
     | SetRegister Nibble Byte
     | AddToRegister Nibble Byte
     | SkipIfEq Nibble Byte
@@ -94,6 +95,7 @@ pattern N3 x y z w <- (nibble3 -> (x, y, z, w))
 decode :: Opcode -> Instruction
 decode ClearScreen' = ClearScreen
 decode (N1 0x1 nnn) = Jump nnn
+decode (N1 0xB nnn) = JumpV0 nnn
 decode (N2 0x6 x nn) = SetRegister x $ Byte nn
 decode (N2 0x7 x nn) = AddToRegister x $ Byte nn
 decode (N2 0x3 x nn) = SkipIfEq x $ Byte nn
@@ -128,6 +130,7 @@ decode _ = End
 encode :: Instruction -> Opcode
 encode ClearScreen = ClearScreen'
 encode (Jump nnn) = N1 0x1 nnn
+encode (JumpV0 nnn) = N1 0xB nnn
 encode (SetRegister x (Byte nn)) = N2 0x6 x nn
 encode (AddToRegister x (Byte nn)) = N2 0x7 x nn
 encode (SkipIfEq x (Byte nn)) = N2 0x3 x nn
