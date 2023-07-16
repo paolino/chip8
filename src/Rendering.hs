@@ -79,7 +79,7 @@ withThreads threads action =
         lift action
 
 nameH :: GraphicsParams -> CInt
-nameH GraphicsParams{gpBigFontSize} = gpBigFontSize * 10 `div` 8
+nameH GraphicsParams{gpTitleFontSize} = gpTitleFontSize * 10 `div` 8
 
 boardY :: GraphicsParams -> CInt -> CInt
 boardY gp = (nameH gp +)
@@ -88,13 +88,13 @@ gameH :: GraphicsParams -> CInt
 gameH GraphicsParams{gpPixelSize} = 32 * gpPixelSize
 
 consoleHH :: GraphicsParams -> CInt
-consoleHH GraphicsParams{gpSmallFontSize} = 2 * gpSmallFontSize
+consoleHH GraphicsParams{gpDebugFontSize} = 2 * gpDebugFontSize
 
 gameY :: GraphicsParams -> CInt -> CInt
 gameY gp = (consoleHH gp +) . (gameH gp +) . boardY gp
 
 reportH :: GraphicsParams -> CInt
-reportH GraphicsParams{gpSmallFontSize} = 20 * gpSmallFontSize
+reportH GraphicsParams{gpDebugFontSize} = 20 * gpDebugFontSize
 
 windowW :: GraphicsParams -> CInt
 windowW GraphicsParams{gpPixelSize} = 64 * gpPixelSize + 1
@@ -107,8 +107,8 @@ center w w' = (w - w') `div` 2
 
 data GraphicsParams = GraphicsParams
     { gpPixelSize :: CInt
-    , gpSmallFontSize :: CInt
-    , gpBigFontSize :: CInt
+    , gpDebugFontSize :: CInt
+    , gpTitleFontSize :: CInt
     , gpFontFile :: FilePath
     , gpBackgroundColor :: Color
     , gpGameColor :: Color
@@ -136,10 +136,10 @@ run gp@GraphicsParams{..} application = do
     initializeAll
     initialize
     window <- createWindow "Chip8 Interpreter" $ wc gp
-    fontSmall <- load gpFontFile $ fromIntegral gpSmallFontSize
-    fontBig <- load gpFontFile $ fromIntegral gpBigFontSize
+    fontDebug <- load gpFontFile $ fromIntegral gpDebugFontSize
+    fontTitle <- load gpFontFile $ fromIntegral gpTitleFontSize
     withThreads [runTimer] $ do
-        loop gp wait window fontSmall fontBig application
+        loop gp wait window fontDebug fontTitle application
     destroyWindow window
 
 data Application s = Application
@@ -182,20 +182,20 @@ pattern KeyReleased x <-
 
 data Rendering = Rendering
     { rcSurface :: Surface
-    , rcSmallFont :: Font
-    , rcBigFont :: Font
+    , rcDebugFont :: Font
+    , rcTitleFont :: Font
     , rcRenderer :: Renderer
     }
 
 drawConsole :: GraphicsParams -> Rendering -> [String] -> IO ()
 drawConsole gp@GraphicsParams{..} Rendering{..} ls =
     forM_ (zip [0 ..] ls) $ \(j, l) -> do
-        txt <- shaded rcSmallFont gpGridColor gpBackgroundColor $ T.pack l
+        txt <- shaded rcDebugFont gpGridColor gpBackgroundColor $ T.pack l
         void
             $ surfaceBlit txt Nothing rcSurface
             $ Just
             $ P
-            $ V2 0 (gameY gp $ gpSmallFontSize * j)
+            $ V2 0 (gameY gp $ gpDebugFontSize * j)
 
 clearWindow :: GraphicsParams -> Rendering -> IO ()
 clearWindow GraphicsParams{..} Rendering{rcRenderer} = do
@@ -205,8 +205,8 @@ clearWindow GraphicsParams{..} Rendering{rcRenderer} = do
 drawGame :: GraphicsParams -> Rendering -> (String, [[Bool]]) -> IO ()
 drawGame gp@GraphicsParams{..} Rendering{..} (name, board) = do
     rendererDrawColor rcRenderer $= gpGameColor
-    txt <- shaded rcBigFont gpTextColor gpBackgroundColor $ T.pack name
-    (sz, _) <- size rcBigFont $ T.pack name
+    txt <- shaded rcTitleFont gpTextColor gpBackgroundColor $ T.pack name
+    (sz, _) <- size rcTitleFont $ T.pack name
     void
         $ surfaceBlit txt Nothing rcSurface
         $ Just
@@ -247,10 +247,10 @@ loop
     -> Font
     -> Application s
     -> IO ()
-loop gp wait window fontSmall fontBig Application{..} = do
+loop gp wait window fontDebug fontTitle Application{..} = do
     surface <- getWindowSurface window
     renderer <- createSoftwareRenderer surface
-    let rendering = Rendering surface fontSmall fontBig renderer
+    let rendering = Rendering surface fontDebug fontTitle renderer
     ($ appInitialState) $ fix $ \go s -> do
         events <- pollEvents
         let f ms e = ms >>= \s'' -> appHandleEvent s'' e

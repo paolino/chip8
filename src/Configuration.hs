@@ -75,19 +75,19 @@ configParser =
             )
         <*> option
             auto
-            ( long "small-font"
-                <> metavar "SMALL_FONT"
+            ( long "debug-font"
+                <> metavar "DEBUG_FONT"
                 <> showDefault
                 <> value 24
-                <> help "Size of small font in pixels"
+                <> help "Size of debug font in pixels"
             )
         <*> option
             auto
-            ( long "large-font"
-                <> metavar "LARGE_FONT"
+            ( long "title-font"
+                <> metavar "TITLE_FONT"
                 <> showDefault
-                <> value 32
-                <> help "Size of large font in pixels"
+                <> value 16
+                <> help "Size of title font in pixels"
             )
         <*> option
             jcolorReader
@@ -152,8 +152,8 @@ data Config = Config
     { romsDir :: FilePath
     , fontFile :: FilePath
     , pixelSize :: Int
-    , smallFont :: Int
-    , largeFont :: Int
+    , debugFont :: Int
+    , titleFont :: Int
     , bgColor :: JColor
     , gameColor :: JColor
     , textColor :: JColor

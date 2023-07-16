@@ -25,8 +25,8 @@ main = do
     let games = zip files states
         gp = GraphicsParams
             do fromIntegral pixelSize
-            do fromIntegral smallFont
-            do fromIntegral largeFont
+            do fromIntegral debugFont
+            do fromIntegral titleFont
             do fontFile
             do colorJ bgColor
             do colorJ gameColor
