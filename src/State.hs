@@ -32,6 +32,8 @@ import Types
     , Byte (..)
     , Coo (..)
     , Display
+    , GetKey (..)
+    , GetKeyState (..)
     , Height
     , KeyState (..)
     , Keys
@@ -53,6 +55,7 @@ renderState State{..} =
         , "SP: " <> show stack
         , "Registers: " <> show registers
         , "Keys: " <> show keys
+        , "GetKey: " <> show getKey
         , "Opcode: " <> showHex (retrieveInstruction programCounter memory) ""
         , "Instruction: " <> show (decode $ retrieveInstruction programCounter memory)
         ]
@@ -67,6 +70,7 @@ data State = State
     , memory :: Memory
     , display :: Display
     , keys :: Keys
+    , getKey :: GetKey
     }
     deriving (Show, Eq)
 
@@ -95,6 +99,7 @@ bootState program =
                 $ loadProgram program
         , display = Map.empty
         , keys = Map.empty
+        , getKey = GetKeyNotWaiting
         }
 
 readR :: Nibble -> Registers -> Byte
@@ -148,4 +153,13 @@ render State{..} = concat $ do
         pure $ if Map.findWithDefault False (Coo x y) display then '█' else ' '
 
 setKeyState :: Nibble -> KeyState -> State -> State
-setKeyState n k s = s{keys = Map.insert n k $ keys s}
+setKeyState n k s = case getKey s of
+    GetKeyWaiting GetKeyEmpty -> case k of
+        Pressed -> s'{getKey = GetKeyWaiting (GetKeyPressed n)}
+        _ -> s'
+    GetKeyWaiting (GetKeyPressed n') -> case k of
+        Released | n' == n -> s'{getKey = GetKeyWaiting (GetKeyReleased n)}
+        _ -> s'
+    _ -> s'
+  where
+    s' = s{keys = Map.insert n k $ keys s}

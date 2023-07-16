@@ -6,7 +6,6 @@
 module Graphics (chip8Application) where
 
 import Data.Map (findWithDefault)
-import Data.Map qualified as Map
 import Interpreter (interpretN)
 import Rendering (Application (..), pattern KeyPressed, pattern KeyReleased)
 import SDL
@@ -35,7 +34,7 @@ import SDL
     , pattern KeycodeReturn
     , pattern KeycodeSpace
     )
-import State (State (display, keys), renderState)
+import State (State (..), renderState, setKeyState)
 import System.Random (StdGen, split)
 import Types (Coo (..), Display, KeyState (..), Nibble)
 
@@ -119,12 +118,8 @@ consumeEvent games old@(GameState run state count _selection _stdgen) c = case c
     Event _ (WindowClosedEvent _) -> Left "Quit"
     x -> case keypad x of
         Nothing -> Right old
-        Just (n, Pressed) ->
-            Right
-                $ old{_state = state{keys = Map.insert n Pressed $ keys state}}
-        Just (n, Released) ->
-            Right
-                $ old{_state = state{keys = Map.insert n Released $ keys state}}
+        Just (n, Pressed) -> Right $ old{_state = setKeyState n Pressed state}
+        Just (n, Released) -> Right $ old{_state = setKeyState n Released state}
 renderStateLines :: GameState -> [String]
 renderStateLines GameState{..} =
     (lines . renderState $ _state)

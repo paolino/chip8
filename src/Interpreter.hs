@@ -6,7 +6,7 @@
 module Interpreter (interpret, interpretN) where
 
 import Data.Bits (Bits (shiftL, shiftR, xor, (.&.)), (.|.))
-import Data.Foldable (find, foldl')
+import Data.Foldable (foldl')
 import Data.List (unfoldr)
 import Data.Map qualified as Map
 import Data.Tuple (swap)
@@ -23,7 +23,7 @@ import State
     , retrieveInstruction
     )
 import System.Random (Random (randomR), StdGen, split)
-import Types (Byte (..), Coo (..), KeyState (..), pattern VF)
+import Types (Byte (..), Coo (..), GetKey (..), GetKeyState (..), KeyState (..), pattern VF)
 import Prelude hiding (readFile)
 
 -- | Interpret a single instruction, returning the new state of the CPU, or
@@ -120,10 +120,20 @@ step _ (SkipIfNotKeyPressed x) State{..} =
         Released -> State{programCounter = programCounter + 2, ..}
         _ -> State{..}
 step _ (WaitForKey x) State{..} =
-    Just $ case find ((==) Pressed . snd) $ Map.assocs keys of
-        Nothing -> State{programCounter = programCounter - 2, ..}
-        Just (k, _) ->
-            State{registers = Map.insert x (fromIntegral k) registers, ..}
+    Just $ case getKey of
+        GetKeyNotWaiting ->
+            State
+                { getKey = GetKeyWaiting GetKeyEmpty
+                , programCounter = programCounter - 2
+                , ..
+                }
+        GetKeyWaiting (GetKeyReleased k) ->
+            State
+                { registers = Map.insert x (fromIntegral k) registers
+                , getKey = GetKeyNotWaiting
+                , ..
+                }
+        _ -> State{programCounter = programCounter - 2, ..}
 step _ (SetIndexRegister nnn) State{..} =
     Just $ State{indexRegister = nnn, ..}
 step _ (Display x y n) cpu@State{..} =

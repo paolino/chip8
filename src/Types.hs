@@ -7,6 +7,8 @@ module Types
     , Registers
     , Display
     , Keys
+    , GetKeyState (..)
+    , GetKey (..)
     , Sprite
     , KeyState (..)
     , Height (..)
@@ -47,6 +49,12 @@ data KeyState = Pressed | Released
     deriving (Eq, Show)
 
 type Keys = Map Nibble KeyState
+
+data GetKey = GetKeyWaiting GetKeyState | GetKeyNotWaiting
+    deriving (Show, Eq)
+
+data GetKeyState = GetKeyPressed Nibble | GetKeyReleased Nibble | GetKeyEmpty
+    deriving (Show, Eq)
 
 type Registers = Map Nibble Byte
 
