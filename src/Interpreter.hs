@@ -135,8 +135,8 @@ step _ (Display x y n) cpu@State{..} =
                 , ..
                 }
   where
-    x' = registers Map.! x
-    y' = registers Map.! y
+    x' = Map.findWithDefault 0 x registers
+    y' = Map.findWithDefault 0 y registers
 step _ (Call nnn) State{..} =
     Just $ State{stack = programCounter : stack, programCounter = nnn, ..}
 step _ Return State{..} = case stack of
