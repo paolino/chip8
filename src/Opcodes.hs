@@ -43,6 +43,7 @@ data Instruction
     | SetIndexRegister Address
     | SetIndexRegisterToHexSprite Nibble
     | SetDelayTimer Nibble
+    | SetSoundTimer Nibble
     | LoadDelayTimer Nibble
     | SkipIfKeyPressed Nibble
     | SkipIfNotKeyPressed Nibble
@@ -120,6 +121,7 @@ decode (N3 0xF x 0x3 0x3) = StoreBCD x
 decode (N3 0xF x 0x1 0xE) = AddToIndexRegister x
 decode (N3 0xF x 0x1 0x5) = SetDelayTimer x
 decode (N3 0xF x 0x0 0x7) = LoadDelayTimer x
+decode (N3 0xF x 0x1 0x8) = SetSoundTimer x
 decode (N3 0xE x 0x9 0xE) = SkipIfKeyPressed x
 decode (N3 0xE x 0xA 0x1) = SkipIfNotKeyPressed x
 decode (N3 0xF x 0x0 0xA) = WaitForKey x
@@ -158,6 +160,7 @@ encode (StoreBCD x) = N3 0xF x 0x3 0x3
 encode (AddToIndexRegister x) = N3 0xF x 0x1 0xE
 encode (SetDelayTimer x) = N3 0xF x 0x1 0x5
 encode (LoadDelayTimer x) = N3 0xF x 0x0 0x7
+encode (SetSoundTimer x) = N3 0xF x 0x1 0x8
 encode (SkipIfKeyPressed x) = N3 0xE x 0x9 0xE
 encode (SkipIfNotKeyPressed x) = N3 0xE x 0xA 0x1
 encode (WaitForKey x) = N3 0xF x 0x0 0xA

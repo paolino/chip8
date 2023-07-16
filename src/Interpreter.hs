@@ -110,6 +110,8 @@ step _ (SetDelayTimer x) State{..} =
     Just $ State{delayTimer = readR x registers, ..}
 step _ (LoadDelayTimer x) State{..} =
     Just $ State{registers = Map.insert x delayTimer registers, ..}
+step _ (SetSoundTimer x) State{..} =
+    Just $ State{soundTimer = readR x registers, ..}
 step _ (SkipIfKeyPressed x) State{..} =
     Just
         $ case readK (fromIntegral $ readR x registers) keys of
