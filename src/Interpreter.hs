@@ -24,7 +24,6 @@ import State
 import System.Random (Random (randomR), StdGen, split)
 import Types (Byte (..), Coo (..), KeyState (..), pattern VF)
 import Prelude hiding (readFile)
-import Data.IntMap (findWithDefault)
 
 -- | Interpret a single instruction, returning the new state of the CPU, or
 -- Nothing if the program has ended
