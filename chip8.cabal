@@ -43,6 +43,7 @@ library
     Programs.Subroutine
     Rendering
     Configuration
+    Sprites
 
   other-modules:    Paths_chip8
   hs-source-dirs:   src
