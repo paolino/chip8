@@ -41,6 +41,7 @@ data Instruction
     | StoreBCD Nibble
     | AddToIndexRegister Nibble
     | SetIndexRegister Address
+    | SetIndexRegisterToHexSprite Nibble
     | SetDelayTimer Nibble
     | LoadDelayTimer Nibble
     | SkipIfKeyPressed Nibble
@@ -50,6 +51,7 @@ data Instruction
     | Call Address
     | Return
     | Random Nibble Byte
+    | Sys Address
     | End
     deriving (Show, Eq)
 
@@ -121,11 +123,13 @@ decode (N3 0xF x 0x0 0x7) = LoadDelayTimer x
 decode (N3 0xE x 0x9 0xE) = SkipIfKeyPressed x
 decode (N3 0xE x 0xA 0x1) = SkipIfNotKeyPressed x
 decode (N3 0xF x 0x0 0xA) = WaitForKey x
+decode (N3 0xF x 0x2 0x9) = SetIndexRegisterToHexSprite x
 decode (N1 0xA nnn) = SetIndexRegister nnn
 decode (N3 0xD x y n) = Display x y $ fromIntegral n
 decode (N1 0x2 nnn) = Call nnn
 decode (N3 0x0 0x0 0xE 0xE) = Return
 decode (N2 0xC x nn) = Random x $ Byte nn
+decode (N1 0x0 nnn) = Sys nnn
 decode _ = End
 
 -- | Converts an instruction to an opcode
@@ -157,11 +161,13 @@ encode (LoadDelayTimer x) = N3 0xF x 0x0 0x7
 encode (SkipIfKeyPressed x) = N3 0xE x 0x9 0xE
 encode (SkipIfNotKeyPressed x) = N3 0xE x 0xA 0x1
 encode (WaitForKey x) = N3 0xF x 0x0 0xA
+encode (SetIndexRegisterToHexSprite x) = N3 0xF x 0x2 0x9
 encode (SetIndexRegister nnn) = N1 0xA nnn
 encode (Display x y n) = N3 0xD x y $ fromIntegral n
 encode (Call nnn) = N1 0x2 nnn
 encode Return = N3 0x0 0x0 0xE 0xE
 encode (Random x (Byte nn)) = N2 0xC x nn
+encode (Sys nnn) = N1 0x0 nnn
 encode End = N1 0xF 0xFFF
 
 -- | Converts a pair of bytes to an opcode

@@ -11,6 +11,7 @@ import Data.List (unfoldr)
 import Data.Map qualified as Map
 import Data.Tuple (swap)
 import Opcodes (Instruction (..), decode)
+import Sprites
 import State
     ( State (..)
     , decreaseTimers
@@ -144,6 +145,11 @@ step _ Return State{..} = case stack of
 step g (Random x nn) State{..} =
     let (r, _g') = randomR (0, 255) g
     in  Just $ State{registers = Map.insert x (Byte r .&. nn) registers, ..}
+step _ (SetIndexRegisterToHexSprite x) State{..} =
+    if canLoadHexadecimalSprites
+        then Just $ State{indexRegister = hexadecimalSprite $ fromIntegral $ readR x registers, ..}
+        else Nothing
+step _ (Sys _) State{..} = Just State{..}
 step _ End _ = Nothing
 
 -- | Interpret a number of instructions, returning the final state of the CPU, or

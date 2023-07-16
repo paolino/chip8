@@ -26,6 +26,7 @@ import Data.Map qualified as Map
 import Numeric (showHex)
 import Offset (addHeaderSpace, memoryOffset)
 import Opcodes (decode)
+import Sprites (canLoadHexadecimalSprites, storeHexadecimalSprites)
 import Types
     ( Address
     , Byte (..)
@@ -86,7 +87,12 @@ bootState program =
         , stack = []
         , delayTimer = 0
         , soundTimer = 0
-        , memory = loadProgram program
+        , memory =
+            ( if canLoadHexadecimalSprites
+                then storeHexadecimalSprites
+                else id
+            )
+                $ loadProgram program
         , display = Map.empty
         , keys = Map.empty
         }

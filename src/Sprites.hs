@@ -1,115 +1,121 @@
-module Sprites (hardcodedSprite) where
-    
-import Types (Byte, Nibble, Sprite)
-import Data.Bits ( Bits((.&.), shiftR) )
-import Data.List (mapAccumL)
+module Sprites
+    ( hexadecimalSprite
+    , storeHexadecimalSprites
+    , canLoadHexadecimalSprites
+    ) where
 
-hardcodedSprite :: Nibble -> Sprite
-hardcodedSprite n = 
-    let offset = fromIntegral n * 5
-    in mkSprite $ take 5 $ drop offset sprites
+import Data.List (foldl')
+import Data.Map qualified as Map
+import Offset (memoryOffset)
+import Types (Address, Byte, Memory, Nibble)
 
-mkSprite :: [Byte] -> Sprite
-mkSprite xs = do 
-    x <- xs
-    pure $  snd $ mapAccumL (\acc j -> (j + 1, acc `shiftR` 1 .&. 1 == 1)) x [0..7]
+hexadecimalSprite :: Nibble -> Address
+hexadecimalSprite = fromIntegral . (* 5)
 
-sprites :: [Byte]
-sprites =    
-    [0xF0
-    ,0x90
-    ,0x90
-    ,0x90
-    ,0xF0
-    -- 1
-    ,0x20
-    ,0x60
-    ,0x20
-    ,0x20
-    ,0x70
-    -- 2
-    ,0xF0
-    ,0x10
-    ,0xF0
-    ,0x80
-    ,0xF0
-    -- 3
-    ,0xF0
-    ,0x10
-    ,0xF0
-    ,0x10
-    ,0xF0
-    -- 4
-    ,0x90
-    ,0x90
-    ,0xF0
-    ,0x10
-    ,0x10
-    -- 5
-    ,0xF0
-    ,0x80
-    ,0xF0
-    ,0x10
-    ,0xF0
-    -- 6
-    ,0xF0
-    ,0x80
-    ,0xF0
-    ,0x90
-    ,0xF0
-    -- 7
-    ,0xF0
-    ,0x10
-    ,0x20
-    ,0x40
-    ,0x40
-    -- 8
-    ,0xF0
-    ,0x90
-    ,0xF0
-    ,0x90
-    ,0xF0
-    -- 9
-    ,0xF0
-    ,0x90
-    ,0xF0
-    ,0x10
-    ,0xF0
-    -- A
-    ,0xF0
-    ,0x90
-    ,0xF0
-    ,0x90
-    ,0x90
-    -- B
-    ,0xE0
-    ,0x90
-    ,0xE0
-    ,0x90
-    ,0xE0
-    -- C
-    ,0xF0
-    ,0x80
-    ,0x80
-    ,0x80
-    ,0xF0
-    -- D
-    ,0xE0
-    ,0x90
-    ,0x90
-    ,0x90
-    ,0xE0
-    -- E
-    ,0xF0
-    ,0x80
-    ,0xF0
-    ,0x80
-    ,0xF0
-    -- F
-    ,0xF0
-    ,0x80
-    ,0xF0
-    ,0x80
-    ,0x80
+storeHexadecimalSprites :: Memory -> Memory
+storeHexadecimalSprites m =
+    foldl' (\acc (i, x) -> Map.insert i x acc) m . zip [0 ..]
+        $ hexadecimalSpritesMemory
+
+canLoadHexadecimalSprites :: Bool
+canLoadHexadecimalSprites =
+    memoryOffset >= fromIntegral (length hexadecimalSpritesMemory)
+
+hexadecimalSpritesMemory :: [Byte]
+hexadecimalSpritesMemory =
+    [ 0xF0
+    , 0x90
+    , 0x90
+    , 0x90
+    , 0xF0
+    , -- 1
+      0x20
+    , 0x60
+    , 0x20
+    , 0x20
+    , 0x70
+    , -- 2
+      0xF0
+    , 0x10
+    , 0xF0
+    , 0x80
+    , 0xF0
+    , -- 3
+      0xF0
+    , 0x10
+    , 0xF0
+    , 0x10
+    , 0xF0
+    , -- 4
+      0x90
+    , 0x90
+    , 0xF0
+    , 0x10
+    , 0x10
+    , -- 5
+      0xF0
+    , 0x80
+    , 0xF0
+    , 0x10
+    , 0xF0
+    , -- 6
+      0xF0
+    , 0x80
+    , 0xF0
+    , 0x90
+    , 0xF0
+    , -- 7
+      0xF0
+    , 0x10
+    , 0x20
+    , 0x40
+    , 0x40
+    , -- 8
+      0xF0
+    , 0x90
+    , 0xF0
+    , 0x90
+    , 0xF0
+    , -- 9
+      0xF0
+    , 0x90
+    , 0xF0
+    , 0x10
+    , 0xF0
+    , -- A
+      0xF0
+    , 0x90
+    , 0xF0
+    , 0x90
+    , 0x90
+    , -- B
+      0xE0
+    , 0x90
+    , 0xE0
+    , 0x90
+    , 0xE0
+    , -- C
+      0xF0
+    , 0x80
+    , 0x80
+    , 0x80
+    , 0xF0
+    , -- D
+      0xE0
+    , 0x90
+    , 0x90
+    , 0x90
+    , 0xE0
+    , -- E
+      0xF0
+    , 0x80
+    , 0xF0
+    , 0x80
+    , 0xF0
+    , -- F
+      0xF0
+    , 0x80
+    , 0xF0
+    , 0x80
+    , 0x80
     ]
-
