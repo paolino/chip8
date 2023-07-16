@@ -96,6 +96,7 @@ executable chip8
     , cmdargs
     , optparse-applicative
     , sdl2
+    , random
 
 
   default-language: Haskell2010

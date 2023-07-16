@@ -36,6 +36,7 @@ import SDL
     , pattern KeycodeSpace
     )
 import State (State (display, keys), renderState)
+import System.Random (StdGen, split)
 import Types (Coo (..), Display, KeyState (..), Nibble)
 
 data Run = Pause | Run | Step | End
@@ -46,6 +47,7 @@ data GameState = GameState
     , _state :: State
     , _count :: Int
     , _selection :: Int
+    , _stdgen :: StdGen
     }
 
 keypad :: Event -> Maybe (Nibble, KeyState)
@@ -89,31 +91,31 @@ keypad = \case
     _ -> Nothing
 
 consumeEvent :: [(String, State)] -> GameState -> Event -> Either String GameState
-consumeEvent games old@(GameState run state count _selection) c = case c of
+consumeEvent games old@(GameState run state count _selection _stdgen) c = case c of
     KeyPressed KeycodeN ->
         let selection' = (_selection + 1) `mod` length games
             state' = snd $ games !! selection'
-        in  Right $ GameState run state' 0 selection'
+        in  Right $ GameState run state' 0 selection' _stdgen
     KeyPressed KeycodeP ->
         let selection' = (_selection - 1) `mod` length games
             state' = snd $ games !! selection'
-        in  Right $ GameState run state' 0 selection'
+        in  Right $ GameState run state' 0 selection' _stdgen
     KeyPressed KeycodeSpace ->
         let run' = case run of
                 Pause -> Run
                 Run -> Pause
                 Step -> Pause
                 x -> x
-        in  Right $ GameState run' state count _selection
+        in  Right $ GameState run' state count _selection _stdgen
     KeyPressed KeycodeReturn ->
         let run' = case run of
                 Pause -> Step
                 Run -> Step
                 Step -> Pause
                 x -> x
-        in  Right $ GameState run' state count _selection
+        in  Right $ GameState run' state count _selection _stdgen
     KeyPressed KeycodeQ -> Left "Quit"
-    KeyPressed KeycodeR -> Right $ GameState run (snd $ games !! _selection) 0 _selection
+    KeyPressed KeycodeR -> Right $ GameState run (snd $ games !! _selection) 0 _selection _stdgen
     Event _ (WindowClosedEvent _) -> Left "Quit"
     x -> case keypad x of
         Nothing -> Right old
@@ -140,16 +142,17 @@ renderStateLines GameState{..} =
            ]
 
 updateState :: Int -> GameState -> (GameState, [String])
-updateState _ old@(GameState Pause _state _ _) = (old, renderStateLines old)
-updateState speed (GameState run state count state0) =
-    case interpretN speed' state of
+updateState _ old@(GameState Pause _state _ _ _stdgen) = (old, renderStateLines old)
+updateState speed (GameState run state count state0 stdgen') =
+    case interpretN stdgen'' speed' state of
         Nothing ->
-            let g = GameState Pause state count state0
+            let g = GameState Pause state count state0 stdgen'''
             in  (g, renderStateLines g)
         Just state' ->
-            let g = GameState run' state' (count + speed) state0
+            let g = GameState run' state' (count + speed) state0 stdgen'''
             in  (g, renderStateLines g)
   where
+    (stdgen'', stdgen''') = split stdgen'
     speed' = case run of
         Run -> speed
         Step -> 1
@@ -159,13 +162,13 @@ updateState speed (GameState run state count state0) =
         Step -> Pause
         End -> End
 
-chip8Application :: Int -> [(String, State)] -> Int -> Application GameState
-chip8Application speed games selection =
+chip8Application :: StdGen -> Int -> [(String, State)] -> Int -> Application GameState
+chip8Application stdgen speed games selection =
     Application
         { appDraw = \s -> (fst $ games !! _selection s,) . extract . display $ _state s
         , appUpdate = updateState speed
         , appHandleEvent = consumeEvent games
-        , appInitialState = GameState Run (snd $ games !! selection) 0 selection
+        , appInitialState = GameState Run (snd $ games !! selection) 0 selection stdgen
         }
 
 extract :: Display -> [[Bool]]

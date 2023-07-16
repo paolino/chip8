@@ -49,6 +49,7 @@ data Instruction
     | Display Nibble Nibble Height
     | Call Address
     | Return
+    | Random Nibble Byte
     | End
     deriving (Show, Eq)
 
@@ -124,6 +125,7 @@ decode (N1 0xA nnn) = SetIndexRegister nnn
 decode (N3 0xD x y n) = Display x y $ fromIntegral n
 decode (N1 0x2 nnn) = Call nnn
 decode (N3 0x0 0x0 0xE 0xE) = Return
+decode (N2 0xC x nn) = Random x $ Byte nn
 decode _ = End
 
 -- | Converts an instruction to an opcode
@@ -159,6 +161,7 @@ encode (SetIndexRegister nnn) = N1 0xA nnn
 encode (Display x y n) = N3 0xD x y $ fromIntegral n
 encode (Call nnn) = N1 0x2 nnn
 encode Return = N3 0x0 0x0 0xE 0xE
+encode (Random x (Byte nn)) = N2 0xC x nn
 encode End = N1 0xF 0xFFF
 
 -- | Converts a pair of bytes to an opcode

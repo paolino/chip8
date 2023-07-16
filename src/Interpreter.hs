@@ -21,109 +21,112 @@ import State
     , readSprite
     , retrieveInstruction
     )
-import Types (Byte, Coo (..), KeyState (..), pattern VF)
+import System.Random (Random (randomR), StdGen, split)
+import Types (Byte (..), Coo (..), KeyState (..), pattern VF)
 import Prelude hiding (readFile)
+import Data.IntMap (findWithDefault)
 
 -- | Interpret a single instruction, returning the new state of the CPU, or
 -- Nothing if the program has ended
-interpret :: State -> Maybe State
-interpret State{..} =
+interpret :: StdGen -> State -> Maybe State
+interpret g State{..} =
     step
+        g
         (decode $ retrieveInstruction programCounter memory)
         $ decreaseTimers
         $ State{programCounter = programCounter + 2, ..}
 
-step :: Instruction -> State -> Maybe State
-step ClearScreen State{..} =
+step :: StdGen -> Instruction -> State -> Maybe State
+step _ ClearScreen State{..} =
     Just $ State{display = Map.empty, ..}
-step (Jump nnn) State{..} =
+step _ (Jump nnn) State{..} =
     Just $ State{programCounter = nnn, ..}
-step (JumpV0 nnn) State{..} =
+step _ (JumpV0 nnn) State{..} =
     Just $ State{programCounter = nnn + fromIntegral (readR 0 registers), ..}
-step (SetRegister x nn) State{..} =
+step _ (SetRegister x nn) State{..} =
     Just $ State{registers = Map.insert x nn registers, ..}
-step (AddToRegister x nn) State{..} =
+step _ (AddToRegister x nn) State{..} =
     Just $ State{registers = Map.insertWith (+) x nn registers, ..}
-step (SkipIfEq x nn) State{..} =
+step _ (SkipIfEq x nn) State{..} =
     Just
         $ if readR x registers == nn
             then State{programCounter = programCounter + 2, ..}
             else State{..}
-step (SkipIfNotEq x nn) State{..} =
+step _ (SkipIfNotEq x nn) State{..} =
     Just
         $ if readR x registers /= nn
             then State{programCounter = programCounter + 2, ..}
             else State{..}
-step (SkipIfEqR x y) State{..} =
+step _ (SkipIfEqR x y) State{..} =
     Just
         $ if readR x registers == readR y registers
             then State{programCounter = programCounter + 2, ..}
             else State{..}
-step (SkipIfNotEqR x y) State{..} =
+step _ (SkipIfNotEqR x y) State{..} =
     Just
         $ if readR x registers /= readR y registers
             then State{programCounter = programCounter + 2, ..}
             else State{..}
-step (CopyR x y) State{..} =
+step _ (CopyR x y) State{..} =
     Just $ State{registers = Map.insert x (readR y registers) registers, ..}
-step (Or x y) State{..} =
+step _ (Or x y) State{..} =
     Just $ State{registers = Map.insert x (readR x registers .|. readR y registers) registers, ..}
-step (And x y) State{..} =
+step _ (And x y) State{..} =
     Just $ State{registers = Map.insert x (readR x registers .&. readR y registers) registers, ..}
-step (Xor x y) State{..} =
+step _ (Xor x y) State{..} =
     Just $ State{registers = Map.insert x (readR x registers `xor` readR y registers) registers, ..}
-step (Add x y) State{..} =
+step _ (Add x y) State{..} =
     let x' = readR x registers
         y' = readR y registers
         vf = if y' > 0xFF - x' then 0x1 else 0x0
     in  Just $ State{registers = Map.insert VF vf . Map.insert x (x' + y') $ registers, ..}
-step (Sub x y) State{..} =
+step _ (Sub x y) State{..} =
     let x' = readR x registers
         y' = readR y registers
         vf = if x' > y' then 0x1 else 0x0
     in  Just $ State{registers = Map.insert VF vf . Map.insert x (x' - y') $ registers, ..}
-step (SubN x y) State{..} =
+step _ (SubN x y) State{..} =
     let x' = readR x registers
         y' = readR y registers
         vf = if y' > x' then 0x1 else 0x0
     in  Just $ State{registers = Map.insert VF vf . Map.insert x (y' - x') $ registers, ..}
-step (ShiftR x _) State{..} =
+step _ (ShiftR x _) State{..} =
     let x' = readR x registers
         vf = if x' .&. 0x1 > 0 then 0x1 else 0x0
     in  Just $ State{registers = Map.insert VF vf . Map.insert x (shiftR x' 1) $ registers, ..}
-step (ShiftL x _) State{..} =
+step _ (ShiftL x _) State{..} =
     let x' = readR x registers
         vf = if x' .&. 0x80 > 0 then 0x1 else 0x0
     in  Just $ State{registers = Map.insert VF vf . Map.insert x (shiftL x' 1) $ registers, ..}
-step (Load x) State{..} =
+step _ (Load x) State{..} =
     Just $ State{registers = foldl' (\r (k, y) -> Map.insert k y r) registers [(i, readM (indexRegister + fromIntegral i) memory) | i <- [0 .. x]], ..}
-step (Store x) State{..} =
+step _ (Store x) State{..} =
     Just $ State{memory = foldl' (\m (k, y) -> Map.insert k y m) memory [(indexRegister + fromIntegral i, readR i registers) | i <- [0 .. x]], ..}
-step (StoreBCD x) State{..} =
+step _ (StoreBCD x) State{..} =
     Just $ State{memory = foldl' (\m (k, y) -> Map.insert k y m) memory (zip [0 ..] (bcd $ readR x registers)), ..}
-step (AddToIndexRegister x) State{..} =
+step _ (AddToIndexRegister x) State{..} =
     Just $ State{indexRegister = indexRegister + fromIntegral (readR x registers), ..}
-step (SetDelayTimer x) State{..} =
+step _ (SetDelayTimer x) State{..} =
     Just $ State{delayTimer = readR x registers, ..}
-step (LoadDelayTimer x) State{..} =
+step _ (LoadDelayTimer x) State{..} =
     Just $ State{registers = Map.insert x delayTimer registers, ..}
-step (SkipIfKeyPressed x) State{..} =
+step _ (SkipIfKeyPressed x) State{..} =
     Just
         $ case readK (fromIntegral $ readR x registers) keys of
             Pressed -> State{programCounter = programCounter + 2, ..}
             _ -> State{..}
-step (SkipIfNotKeyPressed x) State{..} =
+step _ (SkipIfNotKeyPressed x) State{..} =
     Just $ case readK (fromIntegral $ readR x registers) keys of
         Released -> State{programCounter = programCounter + 2, ..}
         _ -> State{..}
-step (WaitForKey x) State{..} =
+step _ (WaitForKey x) State{..} =
     Just $ case find ((==) Pressed . snd) $ Map.assocs keys of
         Nothing -> State{programCounter = programCounter - 2, ..}
         Just (k, _) ->
             State{registers = Map.insert x (fromIntegral k) registers, ..}
-step (SetIndexRegister nnn) State{..} =
+step _ (SetIndexRegister nnn) State{..} =
     Just $ State{indexRegister = nnn, ..}
-step (Display x y n) cpu@State{..} =
+step _ (Display x y n) cpu@State{..} =
     let (changed, display') = pasteSprite (Coo x' y') (readSprite n cpu) display
     in  Just
             $ State
@@ -134,21 +137,26 @@ step (Display x y n) cpu@State{..} =
   where
     x' = registers Map.! x
     y' = registers Map.! y
-step (Call nnn) State{..} =
+step _ (Call nnn) State{..} =
     Just $ State{stack = programCounter : stack, programCounter = nnn, ..}
-step Return State{..} = case stack of
+step _ Return State{..} = case stack of
     [] -> Nothing
     x : xs -> Just $ State{stack = xs, programCounter = x, ..}
-step End _ = Nothing
+step g (Random x nn) State{..} =
+    let (r, _g') = randomR (0, 255) g
+    in  Just $ State{registers = Map.insert x (Byte r .&. nn) registers, ..}
+step _ End _ = Nothing
 
 -- | Interpret a number of instructions, returning the final state of the CPU, or
 -- Nothing if the program has ended
-interpretN :: Int -> State -> Maybe State
-interpretN 0 cpu = Just cpu
-interpretN n cpu = interpret cpu >>= interpretN (n - 1)
+interpretN :: StdGen -> Int -> State -> Maybe State
+interpretN _ 0 cpu = Just cpu
+interpretN g n cpu =
+    let (g', g'') = split g
+    in  interpret g' cpu >>= interpretN g'' (n - 1)
 
 bcd :: Byte -> [Byte]
-bcd x = reverse $ unfoldr split x
+bcd x = reverse $ unfoldr split' x
   where
-    split 0 = Nothing
-    split n = Just $ swap $ divMod n 10
+    split' 0 = Nothing
+    split' n = Just $ swap $ divMod n 10
