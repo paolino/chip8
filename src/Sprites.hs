@@ -21,101 +21,108 @@ canLoadHexadecimalSprites :: Bool
 canLoadHexadecimalSprites =
     memoryOffset >= fromIntegral (length hexadecimalSpritesMemory)
 
+bin :: Integer -> Byte
+bin = go id
+  where
+    go :: (Byte -> Byte) -> Integer -> Byte
+    go f 0 = f 0
+    go f n = go (\acc -> f $ acc * 2 + fromIntegral (n `mod` 10)) (n `div` 10)
 hexadecimalSpritesMemory :: [Byte]
-hexadecimalSpritesMemory =
-    [ 0xF0
-    , 0x90
-    , 0x90
-    , 0x90
-    , 0xF0
-    , -- 1
-      0x20
-    , 0x60
-    , 0x20
-    , 0x20
-    , 0x70
-    , -- 2
-      0xF0
-    , 0x10
-    , 0xF0
-    , 0x80
-    , 0xF0
-    , -- 3
-      0xF0
-    , 0x10
-    , 0xF0
-    , 0x10
-    , 0xF0
-    , -- 4
-      0x90
-    , 0x90
-    , 0xF0
-    , 0x10
-    , 0x10
-    , -- 5
-      0xF0
-    , 0x80
-    , 0xF0
-    , 0x10
-    , 0xF0
-    , -- 6
-      0xF0
-    , 0x80
-    , 0xF0
-    , 0x90
-    , 0xF0
-    , -- 7
-      0xF0
-    , 0x10
-    , 0x20
-    , 0x40
-    , 0x40
-    , -- 8
-      0xF0
-    , 0x90
-    , 0xF0
-    , 0x90
-    , 0xF0
-    , -- 9
-      0xF0
-    , 0x90
-    , 0xF0
-    , 0x10
-    , 0xF0
-    , -- A
-      0xF0
-    , 0x90
-    , 0xF0
-    , 0x90
-    , 0x90
-    , -- B
-      0xE0
-    , 0x90
-    , 0xE0
-    , 0x90
-    , 0xE0
-    , -- C
-      0xF0
-    , 0x80
-    , 0x80
-    , 0x80
-    , 0xF0
-    , -- D
-      0xE0
-    , 0x90
-    , 0x90
-    , 0x90
-    , 0xE0
-    , -- E
-      0xF0
-    , 0x80
-    , 0xF0
-    , 0x80
-    , 0xF0
-    , -- F
-      0xF0
-    , 0x80
-    , 0xF0
-    , 0x80
-    , 0x80
-    ]
+hexadecimalSpritesMemory = fmap (*16)
+  [ -- 0 
+    bin 1111
+  , bin 1001
+  , bin 1001
+  , bin 1001
+  , bin 1111
+  -- 1
+  , bin 0010
+  , bin 0110
+  , bin 0010
+  , bin 0010
+  , bin 0111
+  -- 2
+  , bin 1111
+  , bin 0001
+  , bin 1111
+  , bin 1000
+  , bin 1111
+  -- 3
+  , bin 1111
+  , bin 0001
+  , bin 1111
+  , bin 0001
+  , bin 1111
+  -- 4
+  , bin 1001
+  , bin 1001
+  , bin 1111
+  , bin 0001
+  , bin 0001
+  -- 5
+  , bin 1111
+  , bin 1000
+  , bin 1111
+  , bin 0001
+  , bin 1111
+  -- 6
+  , bin 1111
+  , bin 1000
+  , bin 1111
+  , bin 1001
+  , bin 1111
+  -- 7
+  , bin 1111
+  , bin 0001
+  , bin 0010
+  , bin 0100
+  , bin 0100
+  -- 8
+  , bin 1111
+  , bin 1001
+  , bin 1111
+  , bin 1001
+  , bin 1111
+  -- 9
+  , bin 1111
+  , bin 1001
+  , bin 1111
+  , bin 0001
+  , bin 1111
+  -- A
+  , bin 1111
+  , bin 1001
+  , bin 1111
+  , bin 1001
+  , bin 1001
+  -- B
+  , bin 1110
+  , bin 1001
+  , bin 1110
+  , bin 1001
+  , bin 1110
+  -- C
+  , bin 1111
+  , bin 1000
+  , bin 1000
+  , bin 1000
+  , bin 1111
+  -- D
+  , bin 1110
+  , bin 1001
+  , bin 1001
+  , bin 1001
+  , bin 1110
+  -- E
+  , bin 1111
+  , bin 1000
+  , bin 1111
+  , bin 1000
+  , bin 1111
+  -- F
+  , bin 1111
+  , bin 1000
+  , bin 1111
+  , bin 1000
+  , bin 1000
+  ]
