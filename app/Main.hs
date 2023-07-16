@@ -18,7 +18,8 @@ import System.Random (newStdGen)
 main :: IO ()
 main = do
     Config{..} <- execParser configParserInfo
-    files <- sort <$> listDirectory romsDir
+    files <- filter ((== ".ch8" ) . reverse . take 4 . reverse) .
+        sort <$> listDirectory romsDir
     states <- traverse runFile $ ((romsDir <> "/") <>) <$> files
     stdgen <- newStdGen
     let games = zip files states
