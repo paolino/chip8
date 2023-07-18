@@ -10,6 +10,9 @@ module Opcodes
     , bytesOpcode
     , pattern V0
     , pattern V1
+    , pattern V2
+    , pattern V3
+    , pattern V4
     ) where
 
 import Data.Bits (Bits (..))
@@ -190,3 +193,12 @@ pattern V0 = 0x0
 
 pattern V1 :: Nibble
 pattern V1 = 0x1
+
+pattern V2 :: Nibble
+pattern V2 = 0x2
+
+pattern V3 :: Nibble
+pattern V3 = 0x3
+
+pattern V4 :: Nibble
+pattern V4 = 0x4

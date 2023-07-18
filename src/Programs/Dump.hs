@@ -9,6 +9,7 @@ import Encoding
     )
 import Offset (memoryOffset)
 import Programs.IBM qualified as IBM
+import Programs.Keyboard qualified as Keyboard
 import Programs.Subroutine qualified as Subroutine
 import Prelude hiding (writeFile)
 
@@ -23,3 +24,4 @@ dumpPrograms :: IO ()
 dumpPrograms = do
     writeFile "roms/IBM Logo'.ch8" $ encode IBM.program
     writeFile "roms/Subroutine.ch8" $ encode Subroutine.program
+    writeFile "roms/Keyboard.ch8" $ encode Keyboard.program

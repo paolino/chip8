@@ -11,7 +11,7 @@ import Data.List (unfoldr)
 import Data.Map qualified as Map
 import Data.Tuple (swap)
 import Opcodes (Instruction (..), decode)
-import Sprites
+import Sprites ( canLoadHexadecimalSprites, hexadecimalSprite )
 import State
     ( State (..)
     , decreaseTimers
