@@ -34,6 +34,7 @@ module Encoding
     , addAddressInstruction
     , addAddressInstruction_
     , addRoutine
+    , nextAddress
 
       -- * sprites
     , sprite
@@ -98,6 +99,10 @@ data Assembly a where
         :: Ref -> (Address -> Instruction) -> (Address -> a) -> Assembly a
     -- | Add an assembly routine to the program, returning a reference to it.
     AddRoutine :: AssemblyF () -> (Ref -> a) -> Assembly a
+    -- | Expose the address of the next instruction.
+    NextAddress :: (Address -> a) -> Assembly a
+
+
 
 deriving instance Functor Assembly
 
@@ -130,6 +135,10 @@ addAddressInstruction_ ref f = void $ addAddressInstruction ref f
 -- | Add an assembly to the program.
 addRoutine :: (MonadFree Assembly m) => AssemblyF () -> m Ref
 addRoutine f = liftF $ AddRoutine f id
+
+-- | Expose the address of the next instruction.
+nextAddress :: (MonadFree Assembly m) => m Address
+nextAddress = liftF $ NextAddress id
 
 -- | The state of the assembler.
 data Encoding = Encoding
@@ -257,6 +266,8 @@ interpreter (Free (StoreAddressInstruction ref f g)) encoding =
 interpreter (Free (AddRoutine f g)) encoding =
     let (ref, encoding') = pushRefRourine encoding f
     in  interpreter (g ref) encoding'
+interpreter (Free (NextAddress f)) encoding = interpreter (f $ encodingLastAddress encoding) encoding
+
 
 _addReturn :: Encoding -> Encoding
 _addReturn encoding =
