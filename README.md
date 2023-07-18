@@ -2,22 +2,20 @@
 
 ## implemented
 
-- IBM logo renderer
-- IBM logo assembler
-- DSL to compile to chip8 programs (limited opcodes)
+- interpreter (still buggish...)
+- DSL to compile to chip8 programs 
 
 
 ## prerequisites
 
-- install cabal via ghcup
+- install haskell via ghcup, select ghc-9.8.2 from `ghcup tui`
+- install sdl2 libraries (sdl2-dev, sdl2-ttf-dev) 
 - > cabal update
   
 
 
 ## run
 
-> cabal run chip8
+> cabal run chip8 -- --help
 
-- will produce a `ch8` executable in the roms folder
-- will load and run that executable
 
